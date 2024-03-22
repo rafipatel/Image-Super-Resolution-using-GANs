@@ -9,6 +9,7 @@ from torch.utils import data
 from PIL import Image as PILImage
 import numpy as np
 from torchvision import transforms
+import config
 
 root_dir = "/content/drive/MyDrive/City, University of London /BRP/GAN/" #/ZIP.data.visi.ee.ethz.ch_cvl_DIV2_DIV2_trai_HRnQucRj9uNbbGLMapMO4iJPZws0wd-EGldnD5rPD2wzU.zip/DIV2K_train_HR/"
 class SuperResolutionDataset(Dataset):
@@ -34,8 +35,8 @@ class SuperResolutionDataset(Dataset):
 
         img = np.array(Image.open(img_path))
 
-        transformed_img = both_transforms(image=img)['image']
-        lowres_image = lowres_transform(image=transformed_img)['image']
-        highres_image = highres_transform(image=transformed_img)['image']
+        transformed_img = config.both_transforms(image=img)['image']
+        lowres_image    = config.lowres_transform(image=transformed_img)['image']
+        highres_image   = config.highres_transform(image=transformed_img)['image']
 
         return lowres_image, highres_image

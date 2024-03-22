@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 from model import Generator, Discriminator
 from tqdm import tqdm
 from dataset import SuperResolutionDataset
+import wandb
 # from google.colab import files
 
 
@@ -15,11 +16,14 @@ torch.backends.cudnn.benchmark = True
 
 
 def train_fn(loader, disc, gen, opt_gen, opt_disc, mse, bce, vgg_loss):
-    loop = tqdm(loader, leave=True)
 
+    wandb.init(project='SRGAN', entity='rafi-patel')
+    
+    loop = tqdm(loader, leave=True)
+    
     for idx, (low_res, high_res) in enumerate(loop):
-        high_res = high_res.to(DEVICE)
-        low_res = low_res.to(DEVICE)
+        high_res = high_res.to(config.DEVICE)
+        low_res = low_res.to(config.DEVICE)
 
         ### Train Discriminator: max log(D(x)) + log(1 - D(G(z)))
         fake = gen(low_res)
@@ -30,6 +34,8 @@ def train_fn(loader, disc, gen, opt_gen, opt_disc, mse, bce, vgg_loss):
         ) #one sided label smoothing (extra), rest is as per paper
 
         disc_loss_fake = bce(disc_fake, torch.zeros_like(disc_fake))
+        print('='*50)
+        print(disc_loss_fake)
         loss_disc = disc_loss_fake + disc_loss_real
 
         opt_disc.zero_grad()
@@ -47,6 +53,18 @@ def train_fn(loader, disc, gen, opt_gen, opt_disc, mse, bce, vgg_loss):
         opt_gen.zero_grad()
         gen_loss.backward()
         opt_gen.step()
+        a = {'gen_loss(includingVGGloss)': gen_loss.item(),
+                   'loss_for_vgg' : loss_for_vgg,
+                    'disc_loss': loss_disc.item(),
+                      'mse_loss': l2_loss.item(), 
+                      'adversarial_loss': adversarial_loss.item()}
+        print(a)
+        
+        wandb.log({'gen_loss(includingVGGloss)': gen_loss.item(),
+                   'loss_for_vgg' : loss_for_vgg,
+                    'disc_loss': loss_disc.item(),
+                      'mse_loss': l2_loss.item(), 
+                      'adversarial_loss': adversarial_loss.item()})
 
         # if idx % 200 == 0:
 
@@ -57,15 +75,15 @@ def train_fn(loader, disc, gen, opt_gen, opt_disc, mse, bce, vgg_loss):
 def main():
     # dataset = MyImageFolder(root_dir="new_data/")
 
-
+    root_dir = "G:\My Drive\GAN"
 
     dataset = SuperResolutionDataset(root_dir=root_dir)
     loader = DataLoader(
         dataset,
-        batch_size=BATCH_SIZE,
+        batch_size=config.BATCH_SIZE,
         shuffle=True,
         pin_memory=True,
-        num_workers=NUM_WORKERS,
+        num_workers=config.NUM_WORKERS,
     )
 
 
@@ -79,7 +97,8 @@ def main():
     mse = nn.MSELoss()
     bce = nn.BCEWithLogitsLoss()
     vgg_loss = VGGLoss()
-
+    
+    
     if config.LOAD_MODEL:
 
         # load_checkpoint(
@@ -135,11 +154,12 @@ def main():
               # files.download('/content/disc_1000_epochs.tar')
 
 
-              break
+     
 
 
 
         print(epoch, "Completed")
+        wandb.finish()
 
 
 
