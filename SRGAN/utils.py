@@ -4,7 +4,7 @@ import os
 import numpy as np
 from PIL import Image
 from torchvision.utils import save_image
-
+import config
 
 # def gradient_penalty(critic, real, fake, device): #actually not needed
 #     BATCH_SIZE, C, H, W = real.shape
@@ -61,9 +61,9 @@ def plot_examples(low_res_folder, gen):
         image = Image.open(image)
         with torch.no_grad():
             upscaled_img = gen(
-                test_transform(image=np.asarray(image))["image"]
+                config.test_transform(image=np.asarray(image))["image"]
                 .unsqueeze(0)
-                .to(DEVICE)
+                .to(config.DEVICE)
             )
         save_image(upscaled_img * 0.5 + 0.5, file)
     gen.train()

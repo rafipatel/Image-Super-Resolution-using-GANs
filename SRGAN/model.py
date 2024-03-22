@@ -15,7 +15,7 @@ class ConvBlock(nn.Module):
     'use_act': Choose to use an activation function, enter a Boolean True or False.
     'use_bn': Choose to include a batch normalisation layer, enter a Boolean True or False.
     """
-    super(ConvBlock).__init__()
+    super(ConvBlock, self).__init__()
     self.use_act = use_act
     self.cnn = nn.Conv2d(in_channels, out_channels, **kwargs, bias = not use_bn)  # Bias can be false when we are not using batchnorm
     self.bn = nn.BatchNorm2d(out_channels) if use_bn else nn.Identity()
@@ -34,7 +34,7 @@ class UpsampleBlock(nn.Module):
     'in_channels': Number of Input Channels, enter an integer.
     'scale_factor': 
     """
-    super(UpsampleBlock).__init__()
+    super(UpsampleBlock, self).__init__()
     self.conv = nn.Conv2d(in_channels, in_channels * scale_factor **2, 3, 1, 1)  # The reason for increasing channels here (* scalefactor**2) instead fo bilinear upsample (i.e increase height and width), because we are using pixelshuffle
     self.ps = nn.PixelShuffle(scale_factor)  # in_channels * 4, H, W --> in_channels, H*2, W*2
     self.act = nn.PReLU(num_parameters = in_channels)  # in_channels because after the pixel shifter it will still be in c number of channels
@@ -53,7 +53,7 @@ class ResidualBlock(nn.Module):
     'stride': Choose stride, enter an integer.
     'padding': Choose padding, enter an integer.
     """
-    super(ResidualBlock).__init__()
+    super(ResidualBlock, self).__init__()
     # Same number of input channels as output channels, as seen in the paper.
     self.block1 = ConvBlock(in_channels = in_channels, out_channels = in_channels, kernel_size = kernel_size, stride = stride, padding = padding, use_act = True, use_bn = True)
     self.block2 = ConvBlock(in_channels = in_channels, out_channels= in_channels, kernel_size = kernel_size, stride = stride, padding = padding, use_act = False, use_bn = True)
@@ -74,12 +74,12 @@ class Generator(nn.Module):
     'num_channels':
     'num_blocks':
     """
-    super(Generator).__init__()
-     self.initial = ConvBlock(in_channels = in_channels, out_channels = num_channels, kernel_size = 9, stride = 1, padding = 4, use_bn = False) # False, since no batch norm in the beginning in paper)
-     self.residuals = nn.Sequential(*[ResidualBlock(num_channels) for _ in range(num_blocks)]) # List comprehension to create all of 16 block, and asterisk to unwrap that list of residual block and turning it into Sequential
-     self.convblock = ConvBlock(in_channels = num_channels, out_channels = num_channels, kernel_size = 3, stride = 1 , padding = 1, use_act = False)
-     self.upsamples = nn.Sequential(UpsampleBlock(num_channels, scale_factor = 2), UpsampleBlock(num_channels, scale_factor = 2))
-     self.final = ConvBlock(in_channels = num_channels, out_channels = in_channels, kernel_size = 9, stride = 1, padding = 4)
+    super(Generator, self).__init__()
+    self.initial = ConvBlock(in_channels = in_channels, out_channels = num_channels, kernel_size = 9, stride = 1, padding = 4, use_bn = False) # False, since no batch norm in the beginning in paper)
+    self.residuals = nn.Sequential(*[ResidualBlock(num_channels) for _ in range(num_blocks)]) # List comprehension to create all of 16 block, and asterisk to unwrap that list of residual block and turning it into Sequential
+    self.convblock = ConvBlock(in_channels = num_channels, out_channels = num_channels, kernel_size = 3, stride = 1 , padding = 1, use_act = False)
+    self.upsamples = nn.Sequential(UpsampleBlock(num_channels, scale_factor = 2), UpsampleBlock(num_channels, scale_factor = 2))
+    self.final = ConvBlock(in_channels = num_channels, out_channels = in_channels, kernel_size = 9, stride = 1, padding = 4)
 
   def forward(self, x):
     initial = self.initial(x)
@@ -98,7 +98,7 @@ class Discriminator(nn.Module):
     'in_channels': Number of Input Channels, enter an integer.
     'features':
     """
-    super(Discriminator).__init__()
+    super(Discriminator, self).__init__()
 
     blocks = []
 
@@ -125,7 +125,7 @@ class Discriminator(nn.Module):
       self.classifier = nn.Sequential(
           nn.AdaptiveAvgPool2d((6, 6)), # its 6x6 when its outputted, for instance, if we keep on dividing by stride of 2
           # AdaptiveAvgPool2d won't do anythong if its 96x96, but will make sure it runs when its bigger value like 128,192
-          #nn.Flatten(),
+          nn.Flatten(),
           nn.Linear(512 * 6 * 6, 1024), # 512 is the number of channels in output
           nn.LeakyReLU(0.2, inplace = True),
           nn.Linear(1024, 1)
