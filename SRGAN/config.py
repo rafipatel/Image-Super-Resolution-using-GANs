@@ -3,7 +3,7 @@ from PIL import Image
 import albumentations as A #for data augmentation
 from albumentations.pytorch import ToTensorV2
 
-LOAD_MODEL = True
+LOAD_MODEL = False
 SAVE_MODEL = True
 # CHECKPOINT_GEN = "gen.pth.tar" # CHECKPOINT FILES
 # CHECKPOINT_DISC = "disc.pth.tar"
