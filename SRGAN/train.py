@@ -15,9 +15,16 @@ import wandb
 torch.backends.cudnn.benchmark = True
 
 
+api_key = "c5c782cbed7f9762d90cd4eeb15ca0e75f22e5f0"
+
+# Initialize wandb with your API key
+wandb.login(key=api_key)
+
+wandb.init(project='SRGAN', entity='rafi-patel')
+
 def train_fn(loader, disc, gen, opt_gen, opt_disc, mse, bce, vgg_loss):
 
-    wandb.init(project='SRGAN', entity='rafi-patel')
+    
     
     loop = tqdm(loader, leave=True)
     
