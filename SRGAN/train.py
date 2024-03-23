@@ -125,17 +125,17 @@ def train(train_dataloader, logger, in_channels = 3, optimizer = "adam"):
             }
             
             if SRResnet:
-                torch.save(checkpoint, f'../genSRResnet_{epoch}_epochs.tar')
+                torch.save(checkpoint, f'genSRResnet_{epoch}_epochs.tar')
 
             else:
-                torch.save(checkpoint, f'../gen_{epoch}_epochs.tar')
+                torch.save(checkpoint, f'gen_{epoch}_epochs.tar')
 
             print("=> Saving checkpoint Discriminator")
             checkpoints = {
                 "state_dict": disc.state_dict(),
                 "optimizer": opt_disc.state_dict(),
             }
-            torch.save(checkpoints, f'../disc_{epoch}_epochs.tar')
+            torch.save(checkpoints, f'disc_{epoch}_epochs.tar')
 
     
 
@@ -153,7 +153,7 @@ def main():
     logger = wandb_logger.get_logger()
 
     # dataset = SuperResolutionDataset(root_dir = "../DIV2K_train_HR/")
-    dataset = SuperResolutionDataset(root_dir = "/users/adfx757/GAN/")
+    dataset = SuperResolutionDataset(root_dir = "E:\\GAN\\")
     train_dataloader = DataLoader(dataset, batch_size = config.BATCH_SIZE, shuffle = True, pin_memory = True, num_workers = config.NUM_WORKERS)
 
     train(train_dataloader, logger, in_channels = 3, optimizer = config.OPTIMIZER)
