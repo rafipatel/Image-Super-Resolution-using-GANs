@@ -116,7 +116,7 @@ def train(train_dataloader, logger, in_channels = 3, optimizer = "adam"):
             
             print(f"Epoch: {epoch} / {config.NUM_EPOCHS}, Generator Loss {gen_loss}, VGG Loss {vgg_loss}, Discriminator Loss {disc_loss}, L2 Loss {l2_loss}, Adversarial Loss {adver_loss}")
 
-        if (epoch % 100) == 0:
+        if epoch > 0 and (epoch % 500) == 0:
           if config.SAVE_MODEL:
               
             print("=> Saving checkpoint Generator")
