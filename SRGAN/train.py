@@ -19,9 +19,10 @@ SRResnet = True
 
 def train_epoch(loader, disc, gen, opt_gen, opt_disc, mse, bce, vgg_loss):
     
-    loop = tqdm(loader, leave = True)
+    # loop = tqdm(loader, leave = True)
+
     
-    for idx, (low_res, high_res) in enumerate(loop):
+    for idx, (low_res, high_res) in enumerate(loader):
         high_res = high_res.to(config.DEVICE)
         low_res = low_res.to(config.DEVICE)
 
@@ -149,10 +150,11 @@ def main():
     np.random.seed(randomer)
 
     # Initialise "wandb" for logging
-    wandb_logger = Logger(f"inm705_srgan", project = "inm705_cwk")
+    wandb_logger = Logger(f"inm705_SRResnet", project = "inm705_RESNET")
     logger = wandb_logger.get_logger()
 
     # dataset = SuperResolutionDataset(root_dir = "../DIV2K_train_HR/")
+    # dataset = SuperResolutionDataset(root_dir = "E:\\GAN\\")
     dataset = SuperResolutionDataset(root_dir = "/users/adfx757/GAN/")
     train_dataloader = DataLoader(dataset, batch_size = config.BATCH_SIZE, shuffle = True, pin_memory = True, num_workers = config.NUM_WORKERS)
 
