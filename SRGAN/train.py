@@ -118,20 +118,24 @@ def train(train_dataloader, logger, in_channels = 3, optimizer = "adam"):
         if (epoch % 100) == 0:
           if config.SAVE_MODEL:
               
-              print("=> Saving checkpoint Generator")
-              checkpoint = {
-                  "state_dict": gen.state_dict(),
-                  "optimizer": opt_gen.state_dict(),
-              }
+            print("=> Saving checkpoint Generator")
+            checkpoint = {
+                "state_dict": gen.state_dict(),
+                "optimizer": opt_gen.state_dict(),
+            }
+            
+            if SRResnet:
+                torch.save(checkpoint, f'../genSRResnet_{epoch}_epochs.tar')
 
-              torch.save(checkpoint, f'../gen_{epoch}_epochs.tar')
+            else:
+                torch.save(checkpoint, f'../gen_{epoch}_epochs.tar')
 
-              print("=> Saving checkpoint Discriminator")
-              checkpoints = {
-                  "state_dict": disc.state_dict(),
-                  "optimizer": opt_disc.state_dict(),
-              }
-              torch.save(checkpoints, f'../disc_{epoch}_epochs.tar')
+            print("=> Saving checkpoint Discriminator")
+            checkpoints = {
+                "state_dict": disc.state_dict(),
+                "optimizer": opt_disc.state_dict(),
+            }
+            torch.save(checkpoints, f'../disc_{epoch}_epochs.tar')
 
     
 
