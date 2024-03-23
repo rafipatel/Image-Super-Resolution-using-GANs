@@ -3,7 +3,7 @@ from PIL import Image
 import albumentations as A #for data augmentation
 from albumentations.pytorch import ToTensorV2
 
-LOAD_MODEL = False
+LOAD_MODEL = True
 SAVE_MODEL = True
 # CHECKPOINT_GEN = "gen.pth.tar" # CHECKPOINT FILES
 # CHECKPOINT_DISC = "disc.pth.tar"
@@ -15,7 +15,7 @@ NUM_WORKERS = 0
 HIGH_RES = 96
 LOW_RES = HIGH_RES // 4
 IMG_CHANNELS = 3
-
+OPTIMIZER = "adam"
 
 #After both_transform, for High res image will normalize it between -1 and 1, then convert it into tensor
 highres_transform = A.Compose(

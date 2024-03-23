@@ -8,25 +8,16 @@ from torch.utils.data import DataLoader
 from model import Generator, Discriminator
 from tqdm import tqdm
 from dataset import SuperResolutionDataset
+from logger import Logger
+import numpy as np
+import random
 import wandb
-# from google.colab import files
 
+#torch.backends.cudnn.benchmark = True
 
-torch.backends.cudnn.benchmark = True
-
-
-api_key = "c5c782cbed7f9762d90cd4eeb15ca0e75f22e5f0"
-
-# Initialize wandb with your API key
-wandb.login(key=api_key)
-
-wandb.init(project='SRGAN', entity='rafi-patel')
-
-def train_fn(loader, disc, gen, opt_gen, opt_disc, mse, bce, vgg_loss):
-
+def train_epoch(loader, disc, gen, opt_gen, opt_disc, mse, bce, vgg_loss):
     
-    
-    loop = tqdm(loader, leave=True)
+    loop = tqdm(loader, leave = True)
     
     for idx, (low_res, high_res) in enumerate(loop):
         high_res = high_res.to(config.DEVICE)
@@ -41,8 +32,8 @@ def train_fn(loader, disc, gen, opt_gen, opt_disc, mse, bce, vgg_loss):
         ) #one sided label smoothing (extra), rest is as per paper
 
         disc_loss_fake = bce(disc_fake, torch.zeros_like(disc_fake))
-        print('='*50)
-        print(disc_loss_fake)
+        print('=' * 50)
+        #print(disc_loss_fake)
         loss_disc = disc_loss_fake + disc_loss_real
 
         opt_disc.zero_grad()
@@ -55,73 +46,31 @@ def train_fn(loader, disc, gen, opt_gen, opt_disc, mse, bce, vgg_loss):
         adversarial_loss = 1e-3 * bce(disc_fake, torch.ones_like(disc_fake)) #to play around with loss terms
         loss_for_vgg = 0.006 * vgg_loss(fake, high_res)
         gen_loss =  loss_for_vgg + adversarial_loss
-        # gen_loss =  l2_loss
-        print(gen_loss)
+        
         opt_gen.zero_grad()
         gen_loss.backward()
         opt_gen.step()
-        a = {'gen_loss(includingVGGloss)': gen_loss.item(),
-                   'loss_for_vgg' : loss_for_vgg,
-                    'disc_loss': loss_disc.item(),
-                      'mse_loss': l2_loss.item(), 
-                      'adversarial_loss': adversarial_loss.item()}
-        print(a)
-        
-        wandb.log({'gen_loss(includingVGGloss)': gen_loss.item(),
-                   'loss_for_vgg' : loss_for_vgg,
-                    'disc_loss': loss_disc.item(),
-                      'mse_loss': l2_loss.item(), 
-                      'adversarial_loss': adversarial_loss.item()})
 
-        # if idx % 200 == 0:
+        return gen_loss.item(), loss_for_vgg, loss_disc.item(), l2_loss.item(), adversarial_loss.item()
 
-        #     low_res_valid_folder = "/root/tensorflow_datasets/downloads/extracted/ZIP.data.visi.ee.ethz.ch_cvl_DIV2_DIV2_vali_LRpQpdHEuI3k6NMA2PsrkExS_pOyspikiZaXdg18u21VM.zip/DIV2K_valid_LR_bicubic/X4"
-        #     plot_examples(low_res_valid_folder, gen)
+def train(train_dataloader, logger, in_channels = 3, optimizer = "adam"):
+    gen = Generator(in_channels = in_channels).to(config.DEVICE)
+    disc = Discriminator(in_channels = in_channels).to(config.DEVICE)
 
+    if optimizer == "adam":
+        opt_gen = optim.Adam(gen.parameters(), lr = config.LEARNING_RATE, betas = (0.9, 0.999))
+        opt_disc = optim.Adam(disc.parameters(), lr = config.LEARNING_RATE, betas = (0.9, 0.999))
+    elif optimizer == "radam":
+        opt_gen = optim.RAdam(gen.parameters(), lr = config.LEARNING_RATE, betas = (0.9, 0.999))
+        opt_disc = optim.RAdam(disc.parameters(), lr = config.LEARNING_RATE, betas = (0.9, 0.999))
 
-def main():
-    # dataset = MyImageFolder(root_dir="new_data/")
+    mse_loss_function = nn.MSELoss()
+    bce_loss_function = nn.BCEWithLogitsLoss()
+    vgg_loss_function = VGGLoss()
 
-    root_dir = "G:\My Drive\GAN"
-
-    dataset = SuperResolutionDataset(root_dir=root_dir)
-    loader = DataLoader(
-        dataset,
-        batch_size=config.BATCH_SIZE,
-        shuffle=True,
-        pin_memory=True,
-        num_workers=config.NUM_WORKERS,
-    )
-
-
-    # loader = DataLoader(dataset, batch_size=128) #, num_workers=8)
-
-
-    gen = Generator(in_channels=3).to(config.DEVICE)
-    disc = Discriminator(in_channels=3).to(config.DEVICE)
-    opt_gen = optim.Adam(gen.parameters(), lr=config.LEARNING_RATE, betas=(0.9, 0.999))
-    opt_disc = optim.Adam(disc.parameters(), lr=config.LEARNING_RATE, betas=(0.9, 0.999))
-    mse = nn.MSELoss()
-    bce = nn.BCEWithLogitsLoss()
-    vgg_loss = VGGLoss()
-    
-    
     if config.LOAD_MODEL:
-
-        # load_checkpoint(
-        #     CHECKPOINT_GEN,
-        #     gen,
-        #     opt_gen,
-        #     LEARNING_RATE,
-        # )
-        # load_checkpoint(
-        #    CHECKPOINT_DISC, disc, opt_disc, LEARNING_RATE,
-        # )
-
-
-# def load_checkpoint(checkpoint_file, model, optimizer, lr):
         print("=> Loading checkpoint")
-        checkpoint = torch.load("/content/gen_100_epochs.tar")
+        checkpoint = torch.load("../gen_100_epochs.tar")
         gen.load_state_dict(checkpoint["state_dict"])
         opt_gen.load_state_dict(checkpoint["optimizer"])
 
@@ -131,44 +80,51 @@ def main():
         param_group["lr"] = config.LEARNING_RATE
 
     for epoch in range(config.NUM_EPOCHS):
-        train_fn(loader, disc, gen, opt_gen, opt_disc, mse, bce, vgg_loss)
-        print(epoch)
-        if epoch%100 == 0:
-          if config.SAVE_MODEL:
-              # save_checkpoint(gen, opt_gen, filename=CHECKPOINT_GEN)
-              # save_checkpoint(disc, opt_disc, filename=CHECKPOINT_DISC)
+        gen_loss, vgg_loss, disc_loss, l2_loss, adver_loss = train_epoch(train_dataloader, disc, gen, opt_gen, opt_disc, mse_loss_function, bce_loss_function, vgg_loss_function)
+        
+        print(f"Epoch: {epoch} / {config.NUM_EPOCHS}, Generator Loss {gen_loss}, VGG Loss {vgg_loss}, Discriminator Loss {disc_loss}, L2 Loss {l2_loss}, Adversarial Loss {adver_loss}")
 
-              # def save_checkpoint(model, optimizer, filename="my_checkpoint.pth.tar"):
+        if (epoch % 5) == 0:
+          if config.SAVE_MODEL:
+              
               print("=> Saving checkpoint Generator")
               checkpoint = {
                   "state_dict": gen.state_dict(),
                   "optimizer": opt_gen.state_dict(),
               }
 
-              torch.save(checkpoint, '/content/gen_1000_epochs.tar')
-              # files.download('/content/gen_1000_epochs.tar')
-              # print("Downloading checkpoint Generator")
-
+              torch.save(checkpoint, '../gen_1000_epochs.tar')
 
               print("=> Saving checkpoint Discriminator")
-
               checkpoints = {
                   "state_dict": disc.state_dict(),
                   "optimizer": opt_disc.state_dict(),
               }
-              torch.save(checkpoints, '/content/disc_1000_epochs.tar')
-              # print("Downloading checkpoint Discriminator")
-              # files.download('/content/disc_1000_epochs.tar')
+              torch.save(checkpoints, '../disc_1000_epochs.tar')
 
+    
+        logger.log({'gen_loss(includingVGGloss)': gen_loss,
+                    'vgg_loss' : vgg_loss,
+                    'disc_loss': disc_loss,
+                    'mse_loss': l2_loss, 
+                    'adversarial_loss': adver_loss})
 
-     
+def main():
+    # Set random seed for reproducibility
+    randomer = 50
+    torch.manual_seed(randomer)
+    torch.cuda.manual_seed_all(randomer)
+    random.seed(randomer)
+    np.random.seed(randomer)
 
+    # Initialise "wandb" for logging
+    wandb_logger = Logger(f"inm705_srgan", project = "inm705_cwk")
+    logger = wandb_logger.get_logger()
 
+    dataset = SuperResolutionDataset(root_dir = "../DIV2K_train_HR/")
+    train_dataloader = DataLoader(dataset, batch_size = config.BATCH_SIZE, shuffle = True, pin_memory = True, num_workers = config.NUM_WORKERS)
 
-        print(epoch, "Completed")
-        wandb.finish()
-
-
+    train(train_dataloader, logger, in_channels = 3, optimizer = config.OPTIMIZER)
 
 if __name__ == "__main__":
     main()
