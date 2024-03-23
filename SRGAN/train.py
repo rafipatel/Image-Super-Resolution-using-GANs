@@ -131,12 +131,12 @@ def train(train_dataloader, logger, in_channels = 3, optimizer = "adam"):
             else:
                 torch.save(checkpoint, f'gen_{epoch}_epochs.tar')
 
-            print("=> Saving checkpoint Discriminator")
-            checkpoints = {
-                "state_dict": disc.state_dict(),
-                "optimizer": opt_disc.state_dict(),
-            }
-            torch.save(checkpoints, f'disc_{epoch}_epochs.tar')
+                print("=> Saving checkpoint Discriminator")
+                checkpoints = {
+                    "state_dict": disc.state_dict(),
+                    "optimizer": opt_disc.state_dict(),
+                }
+                torch.save(checkpoints, f'disc_{epoch}_epochs.tar')
 
     
 
