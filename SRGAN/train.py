@@ -20,7 +20,6 @@ SRResnet = True
 def train_epoch(loader, disc, gen, opt_gen, opt_disc, mse, bce, vgg_loss):
     
     # loop = tqdm(loader, leave = True)
-
     
     for idx, (low_res, high_res) in enumerate(loader):
         high_res = high_res.to(config.DEVICE)
@@ -138,9 +137,6 @@ def train(train_dataloader, logger, in_channels = 3, optimizer = "adam"):
                 }
                 torch.save(checkpoints, f'disc_{epoch}_epochs.tar')
 
-    
-
-
 def main():
     # Set random seed for reproducibility
     randomer = 50
@@ -153,10 +149,25 @@ def main():
     wandb_logger = Logger(f"inm705_SRResnet", project = "inm705_RESNET")
     logger = wandb_logger.get_logger()
 
+    ####### Only use for spliting data from a single dataset, likely not needed if data already split #######
+    # Define the sizes for training and validation sets
+    #train_size = int(0.8 * len(dataset))
+    #val_size = len(dataset) - train_size
+    # Split the dataset into training and validation sets
+    #train_dataset, val_dataset = random_split(dataset, [train_size, val_size], generator = generator)
+    # Create data loaders for each set
+    #train_dataloader = DataLoader(train_dataset, batch_size = config.BATCH_SIZE)
+    #val_dataloader = DataLoader(val_dataset, batch_size = config.BATCH_SIZE)
+    ##################################################################################################
+    
     # dataset = SuperResolutionDataset(root_dir = "../DIV2K_train_HR/")
     # dataset = SuperResolutionDataset(root_dir = "E:\\GAN\\")
+    
     dataset = SuperResolutionDataset(root_dir = "/users/adfx757/GAN/")
     train_dataloader = DataLoader(dataset, batch_size = config.BATCH_SIZE, shuffle = True, pin_memory = True, num_workers = config.NUM_WORKERS)
+    
+    #validation_dataset = SuperResolutionDataset(root_dir = "/users/adfx757/GAN/") # enter path for validation dataset
+    #val_dataloader = DataLoader(val_dataset, batch_size = config.BATCH_SIZE) # load data in pytorch format
 
     train(train_dataloader, logger, in_channels = 3, optimizer = config.OPTIMIZER)
 
