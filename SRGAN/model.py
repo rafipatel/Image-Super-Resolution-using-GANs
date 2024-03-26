@@ -46,7 +46,7 @@ class ResidualBlock(nn.Module):
   """
   Residual Block
   """
-  def __init__(self, in_channels, kernel_size = 3, stride = 1, padding = 1):
+  def __init__(self, in_channels): #, kernel_size = 3, stride = 1, padding = 1):
     """
     'in_channels': Number of Input Channels, enter an integer.
     'kernel_size': Choose kernel size, enter an integer.
@@ -55,13 +55,13 @@ class ResidualBlock(nn.Module):
     """
     super(ResidualBlock, self).__init__()
     # Same number of input channels as output channels, as seen in the paper.
-    self.block1 = ConvBlock(in_channels = in_channels, out_channels = in_channels, kernel_size = kernel_size, stride = stride, padding = padding, use_act = True, use_bn = True)
-    self.block2 = ConvBlock(in_channels = in_channels, out_channels= in_channels, kernel_size = kernel_size, stride = stride, padding = padding, use_act = False, use_bn = True)
+    self.block1 = ConvBlock(in_channels = in_channels, out_channels = in_channels, kernel_size = 3, stride = 1, padding = 1,) # use_act = True, use_bn = True)
+    self.block2 = ConvBlock(in_channels = in_channels, out_channels= in_channels, kernel_size = 3, stride = 1, padding = 1, use_act = False, ) # use_bn = True)
 
   def forward(self, x):
     out = self.block1(x)
     out = self.block2(out)
-    # Add the residual 'x' because we need to skip the connection that was inputted to the block
+    # Adding the residual 'x' because we need to skip the connection that was inputted to the block
     return out + x
 
 class Generator(nn.Module):
@@ -79,15 +79,15 @@ class Generator(nn.Module):
     self.residuals = nn.Sequential(*[ResidualBlock(num_channels) for _ in range(num_blocks)]) # List comprehension to create all of 16 block, and asterisk to unwrap that list of residual block and turning it into Sequential
     self.convblock = ConvBlock(in_channels = num_channels, out_channels = num_channels, kernel_size = 3, stride = 1 , padding = 1, use_act = False)
     self.upsamples = nn.Sequential(UpsampleBlock(num_channels, scale_factor = 2), UpsampleBlock(num_channels, scale_factor = 2))
-    self.final = ConvBlock(in_channels = num_channels, out_channels = in_channels, kernel_size = 9, stride = 1, padding = 4)
+    self.final = nn.Conv2d(num_channels, in_channels, kernel_size = 9, stride = 1, padding = 4)
 
   def forward(self, x):
     initial = self.initial(x)
     x = self.residuals(initial) # initial specified, because we want skip conncetion after the first conv layer
     x = self.convblock(x) + initial # elementwise sum from paper archi
     x = self.upsamples(x)
-    return self.final(x)
-    #return torch.tanh(self.final(x)) # not clear they used tanh, (but they normalised between 1 & -1, so it make sense to use tanh)
+    # return self.final(x)
+    return torch.tanh(self.final(x)) # not clear they used tanh, (but they normalised between 1 & -1, so it make sense to use tanh)
 
 class Discriminator(nn.Module):
   """
@@ -128,6 +128,8 @@ class Discriminator(nn.Module):
           nn.Flatten(),
           nn.Linear(512 * 6 * 6, 1024), # 512 is the number of channels in output
           nn.LeakyReLU(0.2, inplace = True),
+          # nn.Sigmoid() ,
+          
           nn.Linear(1024, 1)
           )
 
@@ -147,7 +149,7 @@ def test():
     gen_out = gen(x)
     disc = Discriminator()
     disc_out = disc(gen_out)
-
+    print(disc_out)
     print(gen_out.shape)
     print(disc_out.shape)
 
