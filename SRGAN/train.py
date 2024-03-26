@@ -12,6 +12,7 @@ from logger import Logger
 import numpy as np
 import random
 import wandb
+from torchvision.utils import save_image
 
 #torch.backends.cudnn.benchmark = True
 
@@ -35,7 +36,7 @@ def train_epoch(loader, disc, gen, opt_gen, opt_disc, mse, bce, vgg_loss):
             gen_loss.backward()
             opt_gen.step()
 
-            return gen_loss.item()
+            return gen_loss.item(), fake, high_res, low_res
         
         else:
             fake = gen(low_res)
@@ -67,7 +68,7 @@ def train_epoch(loader, disc, gen, opt_gen, opt_disc, mse, bce, vgg_loss):
 
             # wandb.log({"gen_loss":gen_loss.item(),"VGG loss":loss_for_vgg,"Disc_loss":loss_disc.item(), "MSE":l2_loss.item(),"Adverarial_loss": adversarial_loss.item()})
 
-            return gen_loss.item(), loss_for_vgg, loss_disc.item(), l2_loss.item(), adversarial_loss.item()
+            return gen_loss.item(), loss_for_vgg, loss_disc.item(), l2_loss.item(), adversarial_loss.item() , fake, high_res, low_res
 
 def train(train_dataloader, logger, in_channels = 3, optimizer = "adam"):
     gen = Generator(in_channels = in_channels).to(config.DEVICE)
@@ -98,14 +99,14 @@ def train(train_dataloader, logger, in_channels = 3, optimizer = "adam"):
     for epoch in range(config.NUM_EPOCHS):
 
         if SRResnet:
-            gen_loss = train_epoch(train_dataloader, disc, gen, opt_gen, opt_disc, mse_loss_function, bce_loss_function, vgg_loss_function)
+            gen_loss, fake, hr, lr = train_epoch(train_dataloader, disc, gen, opt_gen, opt_disc, mse_loss_function, bce_loss_function, vgg_loss_function)
 
             logger.log({'gen_loss(only)': gen_loss})
 
             print(f"Epoch: {epoch} / {config.NUM_EPOCHS}, Generator Loss {gen_loss}")
 
         else:
-            gen_loss, vgg_loss, disc_loss, l2_loss, adver_loss = train_epoch(train_dataloader, disc, gen, opt_gen, opt_disc, mse_loss_function, bce_loss_function, vgg_loss_function)
+            gen_loss, vgg_loss, disc_loss, l2_loss, adver_loss , fake, hr, lr = train_epoch(train_dataloader, disc, gen, opt_gen, opt_disc, mse_loss_function, bce_loss_function, vgg_loss_function)
 
             logger.log({'gen_loss(includingVGGloss)': gen_loss,
                     'vgg_loss' : vgg_loss,
@@ -115,7 +116,7 @@ def train(train_dataloader, logger, in_channels = 3, optimizer = "adam"):
             
             print(f"Epoch: {epoch} / {config.NUM_EPOCHS}, Generator Loss {gen_loss}, VGG Loss {vgg_loss}, Discriminator Loss {disc_loss}, L2 Loss {l2_loss}, Adversarial Loss {adver_loss}")
 
-        if epoch > 0 and (epoch % 500) == 0:
+        if epoch > 0 and (epoch % 1000) == 0:
           if config.SAVE_MODEL:
               
             print("=> Saving checkpoint Generator")
@@ -126,6 +127,10 @@ def train(train_dataloader, logger, in_channels = 3, optimizer = "adam"):
             
             if SRResnet:
                 torch.save(checkpoint, f'genSRResnet_{epoch}_epochs.tar')
+
+                save_image(hr *1 + -1,f"HR{epoch}.png")
+                save_image(lr ,f"LR{epoch}.png")
+                save_image(fake *1 + -1,f"GenFake{epoch}.png")
 
             else:
                 torch.save(checkpoint, f'gen_{epoch}_epochs.tar')
@@ -161,9 +166,9 @@ def main():
     ##################################################################################################
     
     # dataset = SuperResolutionDataset(root_dir = "../DIV2K_train_HR/")
-    # dataset = SuperResolutionDataset(root_dir = "E:\\GAN\\")
+    dataset = SuperResolutionDataset(root_dir = "E:\\GAN\\")
     
-    dataset = SuperResolutionDataset(root_dir = "/users/adfx757/GAN/")
+    # dataset = SuperResolutionDataset(root_dir = "/users/adfx757/GAN/")
     train_dataloader = DataLoader(dataset, batch_size = config.BATCH_SIZE, shuffle = True, pin_memory = True, num_workers = config.NUM_WORKERS)
     
     #validation_dataset = SuperResolutionDataset(root_dir = "/users/adfx757/GAN/") # enter path for validation dataset
