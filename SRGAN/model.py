@@ -86,8 +86,8 @@ class Generator(nn.Module):
     x = self.residuals(initial) # initial specified, because we want skip conncetion after the first conv layer
     x = self.convblock(x) + initial # elementwise sum from paper archi
     x = self.upsamples(x)
-    # return self.final(x)
-    return torch.tanh(self.final(x)) # not clear they used tanh, (but they normalised between 1 & -1, so it make sense to use tanh)
+    return self.final(x)
+    # return torch.tanh(self.final(x)) # not clear they used tanh, (but they normalised between 1 & -1, so it make sense to use tanh)
 
 class Discriminator(nn.Module):
   """
