@@ -131,7 +131,7 @@ def train(train_dataloader, logger, in_channels = 3, optimizer = "adam"):
                 save_image(hr *1 + -1,f"HR{epoch}.png")
                 save_image(lr ,f"LR{epoch}.png")
                 save_image(fake *1 + -1,f"GenFake{epoch}.png")
-
+                print("Images Saved Successfully")
             else:
                 torch.save(checkpoint, f'gen_{epoch}_epochs.tar')
 
