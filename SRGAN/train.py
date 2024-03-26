@@ -126,11 +126,11 @@ def train(train_dataloader, logger, in_channels = 3, optimizer = "adam"):
             }
             
             if SRResnet:
-                torch.save(checkpoint, f'genSRResnet_{epoch}_epochs.tar')
+                torch.save(checkpoint, f'genSRResnet_{epoch}_epochs96x96.tar')
 
-                save_image(hr *1 + -1,f"HR{epoch}.png")
-                save_image(lr ,f"LR{epoch}.png")
-                save_image(fake *1 + -1,f"GenFake{epoch}.png")
+                save_image(hr *1 + -1,f"HR{epoch}96x96.png")
+                save_image(lr ,f"LR{epoch}24x24.png")
+                save_image(fake *1 + -1,f"GenFake{epoch}96x96.png")
                 print("Images Saved Successfully")
             else:
                 torch.save(checkpoint, f'gen_{epoch}_epochs.tar')
