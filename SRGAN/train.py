@@ -166,9 +166,9 @@ def main():
     ##################################################################################################
     
     # dataset = SuperResolutionDataset(root_dir = "../DIV2K_train_HR/")
-    dataset = SuperResolutionDataset(root_dir = "E:\\GAN\\")
+    # dataset = SuperResolutionDataset(root_dir = "E:\\GAN\\")
     
-    # dataset = SuperResolutionDataset(root_dir = "/users/adfx757/GAN/")
+    dataset = SuperResolutionDataset(root_dir = "/users/adfx757/GAN/")
     train_dataloader = DataLoader(dataset, batch_size = config.BATCH_SIZE, shuffle = True, pin_memory = True, num_workers = config.NUM_WORKERS)
     
     #validation_dataset = SuperResolutionDataset(root_dir = "/users/adfx757/GAN/") # enter path for validation dataset
