@@ -35,9 +35,9 @@ class SuperResolutionDataset(Dataset):
         img_path = self.data[index]
         img = np.array(Image.open(img_path))
 
-        transformed_img = config.both_transforms(image=img)['image']
-        lowres_image = config.lowres_transform(image=transformed_img)['image']
-        highres_image = config.highres_transform(image=transformed_img)['image']
+        transformed_img = config.both_transforms(image = img)['image']
+        lowres_image = config.lowres_transform(image = transformed_img)['image']
+        highres_image = config.highres_transform(image = transformed_img)['image']
         return lowres_image, highres_image
 
 # data = SuperResolutionDataset(root_dir="G:\\My Drive\\GAN\\")
