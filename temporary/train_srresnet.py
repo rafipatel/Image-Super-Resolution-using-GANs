@@ -66,15 +66,13 @@ def train_epoch(train_dataloader, model, criterion, optimizer, truncated_vgg19 =
 
         # Calculate VGG feature maps for SR and HR images
         if with_VGG == True:
-            sr_imgs = convert_image(sr_imgs, source = "[-1, 1]", target = "imagenet-norm")  # (N, 3, 96, 96), imagenet-normed
+            sr_imgs_norm = convert_image(sr_imgs, source = "[-1, 1]", target = "imagenet-norm")  # (N, 3, 96, 96), imagenet-normed
 
-            sr_imgs_in_vgg_space = truncated_vgg19(sr_imgs)
+            sr_imgs_in_vgg_space = truncated_vgg19(sr_imgs_norm)
             hr_imgs_in_vgg_space = truncated_vgg19(hr_imgs).detach()
 
             # Loss
             loss = criterion(sr_imgs_in_vgg_space, hr_imgs_in_vgg_space)
-
-            sr_imgs = convert_image(sr_imgs, source = "imagenet-norm", target = "[-1, 1]")
 
         else:
             # Loss
@@ -143,15 +141,13 @@ def validate_epoch(val_dataloader, model, criterion, truncated_vgg19 = None, wit
 
             # Calculate VGG feature maps for SR and HR images
             if with_VGG:
-                sr_imgs = convert_image(sr_imgs, source = "[-1, 1]", target = "imagenet-norm")  # (N, 3, 96, 96), imagenet-normed
+                sr_imgs_norm = convert_image(sr_imgs, source = "[-1, 1]", target = "imagenet-norm")  # (N, 3, 96, 96), imagenet-normed
 
-                sr_imgs_in_vgg_space = truncated_vgg19(sr_imgs)
+                sr_imgs_in_vgg_space = truncated_vgg19(sr_imgs_norm)
                 hr_imgs_in_vgg_space = truncated_vgg19(hr_imgs).detach()
 
                 # Loss
                 loss = criterion(sr_imgs_in_vgg_space, hr_imgs_in_vgg_space)
-
-                sr_imgs = convert_image(sr_imgs, source = "imagenet-norm", target = "[-1, 1]")
 
             else:
                 # Loss
@@ -193,14 +189,14 @@ def train(train_dataloader, val_dataloader, model, iterations, logger, with_VGG 
         criterion = nn.MSELoss().to(device)
     # SSIM Loss
     if criterion == "SSIM":
-        criterion = piq.SSIMLoss()
+        criterion = piq.SSIMLoss(downsample = True)
 
     # Apply VGG (if desired)
     truncated_vgg19 = TruncatedVGG19(i = VGG_params[0], j = VGG_params[1])
     truncated_vgg19.eval()
 
     # Total number of epochs to train for (based on iterations)
-    epochs = int(iterations // len(train_dataloader) + 1)
+    epochs = int(iterations // len(train_dataloader))
 
     # Epochs
     for epoch in range(starting_epoch, epochs + 1):
@@ -219,7 +215,7 @@ def train(train_dataloader, val_dataloader, model, iterations, logger, with_VGG 
         logger.log({"train_ssim": train_ssim})
         logger.log({"validation_ssim": val_ssim})
 
-        if (val_loss + 0.0001) < val_losses[epoch - 1]:
+        if (val_loss + 0.00000001) < val_losses[epoch - 1]:
             # Restart patience (improvement in validation loss)
             counter = 0
 
@@ -243,7 +239,7 @@ def train(train_dataloader, val_dataloader, model, iterations, logger, with_VGG 
                         "val_ssim": val_ssim},
                         checkpoint_path)
 
-        elif (val_loss + 0.0001) > val_losses[epoch - 1]:
+        elif (val_loss + 0.00000001) > val_losses[epoch - 1]:
             # Add one to patience
             counter += 1
 
@@ -269,6 +265,7 @@ def train(train_dataloader, val_dataloader, model, iterations, logger, with_VGG 
 
             # Patience reached, stop training (no significant improvement in validation loss after 5 epochs)
             if counter >= 5:
+                print("Ending training due to lack of improvement...")
                 break
 
     return
@@ -306,7 +303,7 @@ def main():
 
     if checkpoint is None:
         model = SRResNet(large_kernel_size = large_kernel_size, small_kernel_size = small_kernel_size, n_channels = n_channels, n_blocks = n_blocks, scaling_factor = scaling_factor)
-        train(train_dataloader, val_dataloader, model, iterations, logger, VGG_params = (5, 4), criterion = "MSE", starting_epoch = 1, optimizer = "adam", checkpoint = None)
+        train(train_dataloader, val_dataloader, model, iterations, logger, with_VGG = False, VGG_params = (5, 4), criterion = "MSE", starting_epoch = 1, optimizer = "adam", checkpoint = None)
 
     else:
         checkpoint = torch.load(checkpoint)
