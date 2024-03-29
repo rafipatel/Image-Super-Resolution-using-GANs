@@ -4,9 +4,6 @@ Data:
   crop_size: 96  # crop size of target HR images
   scaling_factor: 4  # the scaling factor for the generator; the input LR images will be downsampled from the target HR images by this factor
 
-Model:
-  SRGAN: False # "True", "False" (choose True for SRGAN, False for SRResNet)
-
 SRResNet:
   # Model parameters
   large_kernel_size: 9  # kernel size of the first and last convolutions which transform the inputs and outputs
@@ -20,7 +17,7 @@ SRResNet:
   start_epoch: 0  # start at this epoch
   iterations: 1000000  # number of training iterations
   workers: 4  # number of workers for loading data in the DataLoader
-  lr: 0.0001  # learning rate
+  learning_rate: 0.0001  # learning rate
   grad_clip: None  # clip if gradients are exploding
 
 SRGAN:
@@ -47,5 +44,5 @@ SRGAN:
   vgg19_j: 4  # the index j in the definition for VGG loss; see paper or models.py
   beta: 0.001  # the coefficient to weight the adversarial loss in the perceptual loss
   print_freq: 500  # print training status once every __ batches
-  lr: 0.0001  # learning rate
+  learning_rate: 0.0001  # learning rate
   grad_clip: None  # clip if gradients are exploding

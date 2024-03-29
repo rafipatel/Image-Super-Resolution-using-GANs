@@ -4,7 +4,8 @@ import json
 import random
 import torchvision.transforms.functional as FT
 import torch
-import math
+import yaml
+import argparse
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -15,40 +16,56 @@ imagenet_std = torch.FloatTensor([0.229, 0.224, 0.225]).unsqueeze(1).unsqueeze(2
 imagenet_mean_cuda = torch.FloatTensor([0.485, 0.456, 0.406]).to(device).unsqueeze(0).unsqueeze(2).unsqueeze(3)
 imagenet_std_cuda = torch.FloatTensor([0.229, 0.224, 0.225]).to(device).unsqueeze(0).unsqueeze(2).unsqueeze(3)
 
-def create_data_lists(train_folders, test_folders, min_size, output_folder):
+def create_data_lists(train_folders, val_folders, test_folders, min_size, output_folder):
     """
-    Create lists for images in the training set and each of the test sets.
+    Create lists for images in the training set, validation set, and each of the test sets.
 
     :param train_folders: folders containing the training images; these will be merged
+    :param val_folders: folders containing the validation images; these will be merged
     :param test_folders: folders containing the test images; each test folder will form its own test set
     :param min_size: minimum width and height of images to be considered
     :param output_folder: save data lists here
     """
     print("\nCreating data lists... this may take some time.\n")
-    train_images = list()
+
+    # Training data
+    train_images = []
     for d in train_folders:
         for i in os.listdir(d):
             img_path = os.path.join(d, i)
-            img = Image.open(img_path, mode="r")
+            img = Image.open(img_path, mode='r')
             if img.width >= min_size and img.height >= min_size:
                 train_images.append(img_path)
     print("There are %d images in the training data.\n" % len(train_images))
-    with open(os.path.join(output_folder, "train_images.json"), "w") as j:
+    with open(os.path.join(output_folder, 'train_images.json'), 'w') as j:
         json.dump(train_images, j)
 
+    # Validation data
+    val_images = []
+    for d in val_folders:
+        for i in os.listdir(d):
+            img_path = os.path.join(d, i)
+            img = Image.open(img_path, mode='r')
+            if img.width >= min_size and img.height >= min_size:
+                val_images.append(img_path)
+    print("There are %d images in the validation data.\n" % len(val_images))
+    with open(os.path.join(output_folder, 'val_images.json'), 'w') as j:
+        json.dump(val_images, j)
+
+    # Test data
     for d in test_folders:
-        test_images = list()
+        test_images = []
         test_name = d.split("/")[-1]
         for i in os.listdir(d):
             img_path = os.path.join(d, i)
-            img = Image.open(img_path, mode="r")
+            img = Image.open(img_path, mode='r')
             if img.width >= min_size and img.height >= min_size:
                 test_images.append(img_path)
         print("There are %d images in the %s test data.\n" % (len(test_images), test_name))
-        with open(os.path.join(output_folder, test_name + "_test_images.json"), "w") as j:
+        with open(os.path.join(output_folder, test_name + '_test_images.json'), 'w') as j:
             json.dump(test_images, j)
 
-    print("JSONS containing lists of Train and Test images have been saved to %s\n" % output_folder)
+    print("JSONs containing lists of Train, Validation, and Test images have been saved to %s\n" % output_folder)
 
 def convert_image(img, source, target):
     """
@@ -109,7 +126,7 @@ class ImageTransforms(object):
 
     def __init__(self, split, crop_size, scaling_factor, lr_img_type, hr_img_type):
         """
-        :param split: one of "train" or "test"
+        :param split: one of 'train', 'val', or 'test'
         :param crop_size: crop size of HR images
         :param scaling_factor: LR images will be downsampled from the HR images by this factor
         :param lr_img_type: the target format for the LR image; see convert_image() above for available formats
@@ -121,7 +138,7 @@ class ImageTransforms(object):
         self.lr_img_type = lr_img_type
         self.hr_img_type = hr_img_type
 
-        assert self.split in {"train", "test"}
+        assert self.split in {'train', 'val', 'test'}
 
     def __call__(self, img):
         """
@@ -130,7 +147,7 @@ class ImageTransforms(object):
         """
 
         # Crop
-        if self.split == "train":
+        if self.split == 'train':
             # Take a random fixed-size crop of the image, which will serve as the high-resolution (HR) image
             left = random.randint(1, img.width - self.crop_size)
             top = random.randint(1, img.height - self.crop_size)
@@ -155,30 +172,10 @@ class ImageTransforms(object):
         assert hr_img.width == lr_img.width * self.scaling_factor and hr_img.height == lr_img.height * self.scaling_factor
 
         # Convert the LR and HR image to the required type
-        lr_img = convert_image(lr_img, source="pil", target=self.lr_img_type)
-        hr_img = convert_image(hr_img, source="pil", target=self.hr_img_type)
+        lr_img = convert_image(lr_img, source='pil', target=self.lr_img_type)
+        hr_img = convert_image(hr_img, source='pil', target=self.hr_img_type)
 
         return lr_img, hr_img
-
-class AverageMeter(object):
-    """
-    Keeps track of most recent, average, sum, and count of a metric.
-    """
-
-    def __init__(self):
-        self.reset()
-
-    def reset(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
-        self.count = 0
-
-    def update(self, val, n=1):
-        self.val = val
-        self.sum += val * n
-        self.count += n
-        self.avg = self.sum / self.count
 
 def clip_gradient(optimizer, grad_clip):
     """
@@ -192,14 +189,15 @@ def clip_gradient(optimizer, grad_clip):
             if param.grad is not None:
                 param.grad.data.clamp_(-grad_clip, grad_clip)
 
-def save_checkpoint(state, filename):
-    """
-    Save model checkpoint.
+def parse_arguments():
+    parser = argparse.ArgumentParser(description = "Process settings from a YAML file.")
+    parser.add_argument("--config", type = str, default = "config.yaml", help = "Path to YAML configuration file")
+    return parser.parse_args()
 
-    :param state: checkpoint contents
-    """
-
-    torch.save(state, filename)
+def read_settings(config_path):
+    with open(config_path, "r") as file:
+        settings = yaml.safe_load(file)
+    return settings
 
 def adjust_learning_rate(optimizer, shrink_factor):
     """

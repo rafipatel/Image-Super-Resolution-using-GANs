@@ -1,14 +1,21 @@
-import time
+import wandb
 import torch
 from torch import nn
+from torch.utils.data import DataLoader
+from torchvision.utils import make_grid
+import numpy as np
+import piq
+
 from models import SRResNet
 from datasets import SRDataset
 from utils import *
+from logger import Logger
+from loss import TruncatedVGG19
 
 # Data parameters
 data_folder = "./"  # folder with JSON data files
 crop_size = 96  # crop size of target HR images
-scaling_factor = 4  # the scaling factor for the generator; the input LR images will be downsampled from the target HR images by this factor
+scaling_factor = 4  # the scaling factor; the input LR images will be downsampled from the target HR images by this factor
 
 # Model parameters
 large_kernel_size = 9  # kernel size of the first and last convolutions which transform the inputs and outputs
@@ -22,46 +29,58 @@ batch_size = 16  # batch size
 start_epoch = 0  # start at this epoch
 iterations = 1000000  # number of training iterations
 workers = 4  # number of workers for loading data in the DataLoader
-lr = 0.0001  # learning rate
+learning_rate = 0.0001  # learning rate
 grad_clip = None  # clip if gradients are exploding
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 torch.backends.cudnn.benchmark = True
 
-def train_epoch(train_loader, model, criterion, optimizer, epoch):
+def train_epoch(train_dataloader, model, criterion, optimizer, truncated_vgg19 = None, with_VGG = False):
     """
-    One epoch"s training.
+    Epoch trainer
 
-    :param train_loader: DataLoader for training data
-    :param model: model
-    :param criterion: content loss function (Mean Squared-Error loss)
-    :param optimizer: optimizer
-    :param epoch: epoch number
+    train_dataloader: DataLoader for training data
+    model: model
+    criterion: content loss function
+    optimizer: optimizer
+    truncated_vgg19: truncated VGG19 model for feature extraction
+    with_VGG: flag indicating whether to use VGG feature loss
     """
-    model.train()  # training mode enables batch normalization
+    model.train()  # training mode enables batch normalisation
 
-    batch_time = AverageMeter()  # forward prop. + back prop. time
-    data_time = AverageMeter()  # data loading time
-    losses = AverageMeter()  # loss
-
-    start = time.time()
+    # Keep track of Loss/PSNR/SSIM
+    total_loss = 0
+    total_psnr = 0
+    total_ssim = 0
 
     # Batches
-    for i, (lr_imgs, hr_imgs) in enumerate(train_loader):
-        data_time.update(time.time() - start)
+    for i, (lr_imgs, hr_imgs) in enumerate(train_dataloader):
 
         # Move to default device
-        lr_imgs = lr_imgs.to(device)  # (batch_size (N), 3, 24, 24), imagenet-normed
-        hr_imgs = hr_imgs.to(device)  # (batch_size (N), 3, 96, 96), in [-1, 1]
+        lr_imgs = lr_imgs.to(device)  # (batch_size (N), 3, 24, 24), imagenet-normed, 24x24 e.g.
+        hr_imgs = hr_imgs.to(device)  # (batch_size (N), 3, 96, 96), in [-1, 1], 96x96 e.g.
 
-        # Forward prop.
+        # Forward propagation
         sr_imgs = model(lr_imgs)  # (N, 3, 96, 96), in [-1, 1]
 
-        # Loss
-        loss = criterion(sr_imgs, hr_imgs)  # scalar
+        # Calculate VGG feature maps for SR and HR images
+        if with_VGG == True:
+            sr_imgs = convert_image(sr_imgs, source = "[-1, 1]", target = "imagenet-norm")  # (N, 3, 96, 96), imagenet-normed
 
-        # Backward prop.
+            sr_imgs_in_vgg_space = truncated_vgg19(sr_imgs)
+            hr_imgs_in_vgg_space = truncated_vgg19(hr_imgs).detach()
+
+            # Loss
+            loss = criterion(sr_imgs_in_vgg_space, hr_imgs_in_vgg_space)
+
+            sr_imgs = convert_image(sr_imgs, source = "imagenet-norm", target = "[-1, 1]")
+
+        else:
+            # Loss
+            loss = criterion(sr_imgs, hr_imgs)
+
+        # Backward propagation
         optimizer.zero_grad()
         loss.backward()
 
@@ -72,63 +91,229 @@ def train_epoch(train_loader, model, criterion, optimizer, epoch):
         # Update model
         optimizer.step()
 
+        sr_imgs_y = convert_image(sr_imgs, source = "[-1, 1]", target = "[0, 255]") # (w, h), in y-channel
+        hr_imgs_y = convert_image(hr_imgs, source = "[-1, 1]", target = "[0, 255]") # (w, h), in y-channel
+
         # Keep track of loss
-        losses.update(loss.item(), lr_imgs.size(0))
+        total_loss += loss.item()
 
-        # Keep track of batch time
-        batch_time.update(time.time() - start)
+        # Keep track of PSNR
+        total_psnr += piq.psnr(sr_imgs_y, hr_imgs_y, data_range = 255.0)
 
-        # Reset start time
-        start = time.time()
+        # Keep track of SSIM
+        total_ssim += piq.ssim(sr_imgs_y, hr_imgs_y, data_range = 255.0, downsample = True)
 
-        # Print status
-        
-        print(f"Epoch: [{epoch}][{i}/{len(train_loader)}]----"
-              f"Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})----"
-              f"Data Time {data_time.val:.3f} ({data_time.avg:.3f})----"
-              f"Loss {loss.val:.4f} ({loss.avg:.4f})")
+        # Log last image to wandb
+        if i == len(train_dataloader) - 1:
+            hr_img_grid = make_grid(hr_imgs_y, normalize = True)
+            wandb.log({"High-Resolution Images": [wandb.Image(hr_img_grid)]})
 
-    del lr_imgs, hr_imgs, sr_imgs  # free some memory since their histories may be stored
+            sr_img_grid = make_grid(sr_imgs_y, normalize = True)
+            wandb.log({"Super-Resolution Images": [wandb.Image(sr_img_grid)]})
 
-def train():
+    return total_loss / len(train_dataloader), total_psnr / len(train_dataloader), total_ssim / len(train_dataloader)
+
+def validate_epoch(val_dataloader, model, criterion, truncated_vgg19 = None, with_VGG = False):
     """
-    Training.
+    Epoch validator
+
+    val_dataloader: DataLoader for validation data
+    model: model
+    criterion: content loss function
+    truncated_vgg19: truncated VGG19 model for feature extraction
+    with_VGG: flag indicating whether to use VGG feature loss
     """
-    global start_epoch, epoch, checkpoint
+    model.eval()  # Evaluation mode, no batch norm
 
-    # Initialise model or load checkpoint
-    if checkpoint is None:
-        model = SRResNet(large_kernel_size = large_kernel_size, small_kernel_size = small_kernel_size, n_channels = n_channels, n_blocks = n_blocks, scaling_factor = scaling_factor)
-        # Initialise the optimizer
-        optimizer = torch.optim.Adam(params = filter(lambda p: p.requires_grad, model.parameters()), lr = lr)
+    # Keep track of Loss/PSNR/SSIM
+    total_loss = 0
+    total_psnr = 0
+    total_ssim = 0
 
-    else:
-        checkpoint = torch.load(checkpoint)
-        start_epoch = checkpoint["epoch"] + 1
-        model = checkpoint["model"]
-        optimizer = checkpoint["optimizer"]
+    with torch.no_grad():  # No gradient computation during validation
+        # Batches
+        for i, (lr_imgs, hr_imgs) in enumerate(val_dataloader):
+
+            # Move to default device
+            lr_imgs = lr_imgs.to(device)  # (batch_size (N), 3, 24, 24), imagenet-normed, 24x24 e.g.
+            hr_imgs = hr_imgs.to(device)  # (batch_size (N), 3, 96, 96), in [-1, 1], 96x96 e.g.
+
+            # Forward propagation
+            sr_imgs = model(lr_imgs)  # (N, 3, 96, 96), in [-1, 1]
+
+            # Calculate VGG feature maps for SR and HR images
+            if with_VGG:
+                sr_imgs = convert_image(sr_imgs, source = "[-1, 1]", target = "imagenet-norm")  # (N, 3, 96, 96), imagenet-normed
+
+                sr_imgs_in_vgg_space = truncated_vgg19(sr_imgs)
+                hr_imgs_in_vgg_space = truncated_vgg19(hr_imgs).detach()
+
+                # Loss
+                loss = criterion(sr_imgs_in_vgg_space, hr_imgs_in_vgg_space)
+
+                sr_imgs = convert_image(sr_imgs, source = "imagenet-norm", target = "[-1, 1]")
+
+            else:
+                # Loss
+                loss = criterion(sr_imgs, hr_imgs)
+            
+            sr_imgs_y = convert_image(sr_imgs, source = "[-1, 1]", target = "[0, 255]")  # (w, h), in y-channel
+            hr_imgs_y = convert_image(hr_imgs, source = "[-1, 1]", target = "[0, 255]")  # (w, h), in y-channel
+
+            # Keep track of loss
+            total_loss += loss.item()
+
+            # Keep track of PSNR
+            total_psnr += piq.psnr(sr_imgs_y, hr_imgs_y, data_range = 255.0)
+
+            # Keep track of SSIM
+            total_ssim += piq.ssim(sr_imgs_y, hr_imgs_y, data_range = 255.0, downsample = True)
+
+    return total_loss / len(val_dataloader), total_psnr / len(val_dataloader), total_ssim / len(val_dataloader)
+
+def train(train_dataloader, val_dataloader, model, iterations, logger, with_VGG = False, VGG_params = (5, 4), criterion = "MSE", starting_epoch = 1, optimizer = "adam", checkpoint = None):
+    """
+    Training
+    """
+    val_losses = [float("inf")]
+    counter = 0
+
+    # Adam
+    if (optimizer == "adam") and (checkpoint == None):
+        optimizer = torch.optim.Adam(params = filter(lambda p: p.requires_grad, model.parameters()), lr = learning_rate)
+    # SGD Nesterov
+    if (optimizer == "sgd") and (checkpoint == None):
+        optimizer = torch.optim.SGD(params = filter(lambda p: p.requires_grad, model.parameters()), lr = learning_rate, nesterov = True, momentum = 0.9)
 
     # Move to default device
     model = model.to(device)
-    criterion = nn.MSELoss().to(device)
+
+    # MSE Loss
+    if criterion == "MSE":
+        criterion = nn.MSELoss().to(device)
+    # SSIM Loss
+    if criterion == "SSIM":
+        criterion = piq.SSIMLoss()
+
+    # Apply VGG (if desired)
+    truncated_vgg19 = TruncatedVGG19(i = VGG_params[0], j = VGG_params[1])
+    truncated_vgg19.eval()
+
+    # Total number of epochs to train for (based on iterations)
+    epochs = int(iterations // len(train_dataloader) + 1)
+
+    # Epochs
+    for epoch in range(starting_epoch, epochs + 1):
+        # Train and validation epoch
+        train_loss, train_psnr, train_ssim = train_epoch(train_dataloader, model = model, criterion = criterion, optimizer = optimizer, truncated_vgg19 = truncated_vgg19, with_VGG = with_VGG)
+        val_loss, val_psnr, val_ssim = validate_epoch(val_dataloader, model = model, criterion = criterion, truncated_vgg19 = truncated_vgg19, with_VGG = with_VGG)
+
+        print(f"Epoch: {epoch} / {epochs}, Train Loss {train_loss}, Validation Loss {val_loss}, Train PSNR {train_psnr}, Validation PSNR {val_psnr}, Train SSIM {train_ssim}, Validation SSIM {val_ssim}")
+
+        val_losses.append(val_loss)
+
+        logger.log({"train_loss": train_loss})
+        logger.log({"validation_loss": val_loss})
+        logger.log({"train_psnr": train_psnr})
+        logger.log({"validation_psnr": val_psnr})
+        logger.log({"train_ssim": train_ssim})
+        logger.log({"validation_ssim": val_ssim})
+
+        if (val_loss + 0.0001) < val_losses[epoch - 1]:
+            # Restart patience (improvement in validation loss)
+            counter = 0
+
+            # Create checkpoint folder
+            if not os.path.exists("checkpoints"):
+                os.makedirs("checkpoints")
+
+            # Save the model checkpoint
+            checkpoint_name = f"checkpoint_srresnet.pth.tar"
+            checkpoint_path = os.path.join("checkpoints", checkpoint_name)
+
+            # Save checkpoint
+            torch.save({"epoch": epoch,
+                        "model": model,
+                        "optimizer": optimizer,
+                        "train_loss": train_loss,
+                        "val_loss": val_loss,
+                        "train_psnr": train_psnr,
+                        "val_psnr": val_psnr,
+                        "train_ssim": train_ssim,
+                        "val_ssim": val_ssim},
+                        checkpoint_path)
+
+        elif (val_loss + 0.0001) > val_losses[epoch - 1]:
+            # Add one to patience
+            counter += 1
+
+            if val_loss < val_losses[epoch - 1]:
+                # Create checkpoint folder
+                if not os.path.exists("checkpoints"):
+                    os.makedirs("checkpoints")
+
+                checkpoint_name = f"checkpoint_srresnet.pth.tar"
+                checkpoint_path = os.path.join("checkpoints", checkpoint_name)
+
+                # Save checkpoint
+                torch.save({"epoch": epoch,
+                            "model": model,
+                            "optimizer": optimizer,
+                            "train_loss": train_loss,
+                            "val_loss": val_loss,
+                            "train_psnr": train_psnr,
+                            "val_psnr": val_psnr,
+                            "train_ssim": train_ssim,
+                            "val_ssim": val_ssim},
+                            checkpoint_path)
+
+            # Patience reached, stop training (no significant improvement in validation loss after 5 epochs)
+            if counter >= 5:
+                break
+
+    return
+
+def main():
+    # Set random seed for reproducibility
+    randomer = 50
+    torch.manual_seed(randomer)
+    torch.cuda.manual_seed_all(randomer)
+    random.seed(randomer)
+    np.random.seed(randomer)
+
+    # Read settings from the YAML file
+    args = parse_arguments()
+    settings = read_settings(args.config)
+
+    # Access and use the settings as needed
+    model_settings = settings.get("model", {})
+    train_settings = settings.get("train", {})
+    #print(model_settings)
+    #print(train_settings)
+
+    # Initialise 'wandb' for logging
+    wandb_logger = Logger(f"inm705_SRResNet", project = "inm705_cwk")
+    logger = wandb_logger.get_logger()
 
     # Custom dataloaders
     train_dataset = SRDataset(data_folder, split = "train", crop_size = crop_size, scaling_factor = scaling_factor, lr_img_type = "imagenet-norm", hr_img_type = "[-1, 1]")
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size = batch_size, shuffle = True, num_workers = workers, pin_memory = True)  # note that we"re passing the collate function here
+    train_dataloader = DataLoader(train_dataset, batch_size = batch_size, shuffle = True, num_workers = workers, pin_memory = True)  # note that we're passing the collate function here
 
-    # Total number of epochs to train for (based on iterations)
-    epochs = int(iterations // len(train_loader) + 1)
+    val_dataset = SRDataset(data_folder, split = "val", crop_size = 0, scaling_factor = scaling_factor, lr_img_type = "imagenet-norm", hr_img_type = "[-1, 1]")
+    val_dataloader = DataLoader(val_dataset, batch_size = 1, shuffle = True, num_workers = workers, pin_memory = True)  # note that we're passing the collate function here
 
-    # Epochs
-    for epoch in range(start_epoch, epochs):
-        # One epoch"s training
-        train_epoch(train_loader = train_loader, model = model, criterion = criterion, optimizer = optimizer, epoch = epoch)
+    checkpoint = None
 
-        # Save checkpoint
-        torch.save({"epoch": epoch,
-                    "model": model,
-                    "optimizer": optimizer},
-                    "checkpoint_srresnet.pth.tar")
+    if checkpoint is None:
+        model = SRResNet(large_kernel_size = large_kernel_size, small_kernel_size = small_kernel_size, n_channels = n_channels, n_blocks = n_blocks, scaling_factor = scaling_factor)
+        train(train_dataloader, val_dataloader, model, iterations, logger, VGG_params = (5, 4), criterion = "MSE", starting_epoch = 1, optimizer = "adam", checkpoint = None)
+
+    else:
+        checkpoint = torch.load(checkpoint)
+        starting_epoch = checkpoint["epoch"] + 1
+        model = checkpoint["model"]
+        optimizer = checkpoint["optimizer"]
+        train(train_dataloader, val_dataloader, model, iterations, logger, VGG_params = (5, 4), criterion = "MSE", starting_epoch = starting_epoch, optimizer = optimizer, checkpoint = checkpoint)
 
 if __name__ == "__main__":
-    train()
+    main()

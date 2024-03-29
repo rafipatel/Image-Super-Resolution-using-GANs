@@ -1,6 +1,7 @@
 from utils import *
 from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 from datasets import SRDataset
+import numpy as np
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -9,8 +10,8 @@ data_folder = "./"
 test_data_names = ["Set5_"]
 
 # Model checkpoints
-srgan_checkpoint = "../checkpoint_srgan.pth.tar"
-srresnet_checkpoint = "../checkpoint_srresnet.pth.tar"
+srgan_checkpoint = "checkpoint_srgan.pth.tar"
+srresnet_checkpoint = "checkpoint_srresnet.pth.tar"
 
 # Load SRResNet
 srresnet = torch.load(srresnet_checkpoint)['model'].to(device)
@@ -25,15 +26,15 @@ model = srresnet
 # Evaluate
 def evaluation():
     for test_data_name in test_data_names:
-        print("\nFor %s:\n" % test_data_name)
+        print(f"\nFor {test_data_name}:\n")
 
         # Custom dataloader
         test_dataset = SRDataset(data_folder, split = "test", crop_size = 0, scaling_factor = 4, lr_img_type = "imagenet-norm", hr_img_type = "[-1, 1]", test_data_name = test_data_name)
         test_loader = torch.utils.data.DataLoader(test_dataset, batch_size = 1, shuffle = False, num_workers = 4, pin_memory = True)
 
         # Keep track of the PSNRs and the SSIMs across batches
-        PSNRs = AverageMeter()
-        SSIMs = AverageMeter()
+        PSNRs = []
+        SSIMs = []
 
         # Faster computation
         with torch.no_grad():
@@ -51,12 +52,13 @@ def evaluation():
                 hr_imgs_y = convert_image(hr_imgs, source = "[-1, 1]", target = "y-channel").squeeze(0)  # (w, h), in y-channel
                 psnr = peak_signal_noise_ratio(hr_imgs_y.cpu().numpy(), sr_imgs_y.cpu().numpy(), data_range = 255.0)
                 ssim = structural_similarity(hr_imgs_y.cpu().numpy(), sr_imgs_y.cpu().numpy(), data_range = 255.0)
-                PSNRs.update(psnr, lr_imgs.size(0))
-                SSIMs.update(ssim, lr_imgs.size(0))
+                PSNRs.append(psnr)
+                SSIMs.append(ssim)
 
         # Print average PSNR and SSIM
-        print(f"PSNR - {PSNRs.avg:.3f}")
-        print(f"SSIM - {SSIMs.avg:.3f}")
+        print(f"Number of images: {len(test_loader)}")
+        print(f"Average PSNR: {round(np.mean(PSNRs), 4)}")
+        print(f"Average SSIM: {round(np.mean(SSIMs), 4)}")
 
         print("\n")
 
