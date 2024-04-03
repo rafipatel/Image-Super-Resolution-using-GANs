@@ -257,5 +257,150 @@ def main():
                     "optimizer_d": optimizer_d},
                     "checkpoint_srgan.pth.tar")
 
+def train(train_dataloader, val_dataloader, model, iterations, logger, with_VGG = False, VGG_params = (5, 4), criterion = "MSE", starting_epoch = 1, optimizer = "adam", checkpoint = None):
+    """
+    Training
+    """
+    val_losses = [float("inf")]
+    counter = 0
+
+    # Adam
+    if (optimizer == "adam") and (checkpoint == None):
+        optimizer = torch.optim.Adam(params = filter(lambda p: p.requires_grad, model.parameters()), lr = learning_rate)
+    # SGD Nesterov
+    if (optimizer == "sgd-n") and (checkpoint == None):
+        optimizer = torch.optim.SGD(params = filter(lambda p: p.requires_grad, model.parameters()), lr = learning_rate, nesterov = True, momentum = 0.9)
+    # SGD
+    if (optimizer == "sgd") and (checkpoint == None):
+        optimizer = torch.optim.SGD(params = filter(lambda p: p.requires_grad, model.parameters()), lr = learning_rate)
+
+    # Move to default device
+    model = model.to(device)
+
+    # Apply VGG (if desired)
+    truncated_vgg19 = TruncatedVGG19(i = VGG_params[0], j = VGG_params[1])
+    truncated_vgg19.eval()
+
+    # Total number of epochs to train for (based on iterations)
+    epochs = int(iterations // len(train_dataloader))
+
+    # Epochs
+    for epoch in range(starting_epoch, epochs + 1):
+        # At the halfway point, reduce learning rate by a tenth
+        if epoch == int(epochs // 2):
+            adjust_learning_rate(optimizer, 0.1)
+
+        # Train and validation epoch
+        train_loss, train_psnr, train_ssim = train_epoch(train_dataloader, model = model, criterion = criterion, optimizer = optimizer, truncated_vgg19 = truncated_vgg19, with_VGG = with_VGG)
+        val_loss, val_psnr, val_ssim = validate_epoch(val_dataloader, model = model, criterion = criterion, truncated_vgg19 = truncated_vgg19, with_VGG = with_VGG)
+
+        print(f"Epoch: {epoch} / {epochs}, Train Loss {train_loss}, Validation Loss {val_loss}, Train PSNR {train_psnr}, Validation PSNR {val_psnr}, Train SSIM {train_ssim}, Validation SSIM {val_ssim}")
+
+        val_losses.append(val_loss)
+
+        logger.log({"train_loss": train_loss})
+        logger.log({"validation_loss": val_loss})
+        logger.log({"train_psnr": train_psnr})
+        logger.log({"validation_psnr": val_psnr})
+        logger.log({"train_ssim": train_ssim})
+        logger.log({"validation_ssim": val_ssim})
+
+        if (val_loss + 0.00000001) < val_losses[-2]:
+            # Restart patience (improvement in validation loss)
+            counter = 0
+
+            # Create checkpoint folder
+            if not os.path.exists("checkpoints"):
+                os.makedirs("checkpoints")
+
+            # Save the model checkpoint
+            checkpoint_name = f"checkpoint_srresnet.pth.tar"
+            checkpoint_path = os.path.join("checkpoints", checkpoint_name)
+
+            # Save checkpoint
+            torch.save({"epoch": epoch,
+                        "model": model,
+                        "optimizer": optimizer,
+                        "train_loss": train_loss,
+                        "val_loss": val_loss,
+                        "train_psnr": train_psnr,
+                        "val_psnr": val_psnr,
+                        "train_ssim": train_ssim,
+                        "val_ssim": val_ssim},
+                        checkpoint_path)
+
+        elif (val_loss + 0.00000001) > val_losses[-2]:
+            # Add one to patience
+            counter += 1
+
+            if val_loss < val_losses[-2]:
+                # Create checkpoint folder
+                if not os.path.exists("checkpoints"):
+                    os.makedirs("checkpoints")
+
+                checkpoint_name = f"checkpoint_srresnet.pth.tar"
+                checkpoint_path = os.path.join("checkpoints", checkpoint_name)
+
+                # Save checkpoint
+                torch.save({"epoch": epoch,
+                            "model": model,
+                            "optimizer": optimizer,
+                            "train_loss": train_loss,
+                            "val_loss": val_loss,
+                            "train_psnr": train_psnr,
+                            "val_psnr": val_psnr,
+                            "train_ssim": train_ssim,
+                            "val_ssim": val_ssim},
+                            checkpoint_path)
+
+            # Patience reached, stop training (no significant improvement in validation loss after 5 epochs)
+            if counter >= 5:
+                print("Ending training due to lack of improvement...")
+                break
+
+    return
+
+def main():
+    # Set random seed for reproducibility
+    randomer = 50
+    torch.manual_seed(randomer)
+    torch.cuda.manual_seed_all(randomer)
+    random.seed(randomer)
+    np.random.seed(randomer)
+
+    # Read settings from the YAML file
+    #args = parse_arguments()
+    #settings = read_settings(args.config)
+
+    # Access and use the settings as needed
+    #model_settings = settings.get("model", {})
+    #train_settings = settings.get("train", {})
+    #print(model_settings)
+    #print(train_settings)
+
+    # Initialise 'wandb' for logging
+    wandb_logger = Logger(f"inm705_SRResNet_Adam_MAE_adaptive_lr_no_batch_norm_gelu", project = "inm705_cwk")
+    logger = wandb_logger.get_logger()
+
+    # Custom dataloaders
+    train_dataset = SRDataset(data_folder, split = "train", crop_size = crop_size, scaling_factor = scaling_factor, lr_img_type = "imagenet-norm", hr_img_type = "[-1, 1]")
+    train_dataloader = DataLoader(train_dataset, batch_size = batch_size, shuffle = True, num_workers = workers, pin_memory = True)  # note that we're passing the collate function here
+
+    val_dataset = SRDataset(data_folder, split = "val", crop_size = 0, scaling_factor = scaling_factor, lr_img_type = "imagenet-norm", hr_img_type = "[-1, 1]")
+    val_dataloader = DataLoader(val_dataset, batch_size = 1, shuffle = True, num_workers = workers, pin_memory = True)  # note that we're passing the collate function here
+
+    checkpoint = None
+
+    if checkpoint is None:
+        model = 
+        train(train_dataloader, val_dataloader, model, iterations, logger, with_VGG = False, VGG_params = (5, 4), criterion = "MAE", starting_epoch = 1, optimizer = "adam", checkpoint = None)
+
+    else:
+        checkpoint = torch.load(checkpoint)
+        starting_epoch = checkpoint["epoch"] + 1
+        model = checkpoint["model"]
+        optimizer = checkpoint["optimizer"]
+        train(train_dataloader, val_dataloader, model, iterations, logger, VGG_params = (5, 4), criterion = "MAE", starting_epoch = starting_epoch, optimizer = optimizer, checkpoint = checkpoint)
+
 if __name__ == "__main__":
     main()

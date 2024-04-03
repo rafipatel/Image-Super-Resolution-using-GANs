@@ -19,7 +19,7 @@ scaling_factor = 4  # the scaling factor; the input LR images will be downsample
 
 # Model parameters
 large_kernel_size = 9  # kernel size of the first and last convolutions which transform the inputs and outputs
-small_kernel_size = 3  # kernel size of all convolutions in-between, i.e. those in the residual and subpixel convolutional blocks
+small_kernel_size = 5  # kernel size of all convolutions in-between, i.e. those in the residual and subpixel convolutional blocks
 n_channels = 64  # number of channels in-between, i.e. the input and output channels for the residual and subpixel convolutional blocks
 n_blocks = 16  # number of residual blocks
 
@@ -30,13 +30,13 @@ start_epoch = 0  # start at this epoch
 iterations = 1000000  # number of training iterations
 workers = 4  # number of workers for loading data in the DataLoader
 learning_rate = 0.0001  # learning rate
-grad_clip = None  # clip if gradients are exploding
+grad_clip = 0.1  # clip if gradients are exploding
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 torch.backends.cudnn.benchmark = True
 
-def train_epoch(train_dataloader, model, criterion, optimizer, truncated_vgg19 = None, with_VGG = False):
+def train_epoch(train_dataloader, model, criterion, optimizer, truncated_vgg19 = None, with_VGG = False, grad_clip = None):
     """
     Epoch trainer
 
@@ -48,6 +48,20 @@ def train_epoch(train_dataloader, model, criterion, optimizer, truncated_vgg19 =
     with_VGG: flag indicating whether to use VGG feature loss
     """
     model.train()  # training mode enables batch normalisation
+    
+    # MSE Loss
+    if criterion == "MSE":
+        loss_function = nn.MSELoss()
+    # MAE Loss
+    if criterion == "MAE":
+        loss_function = nn.L1Loss()
+    # SSIM Loss
+    if criterion == "SSIM":
+        loss_function = piq.SSIMLoss(downsample = True, data_range = 255.0)
+
+    if with_VGG == True:
+        loss_function = nn.MSELoss()
+        print("Defaulting to MSE loss for VGG...")
 
     # Keep track of Loss/PSNR/SSIM
     total_loss = 0
@@ -72,11 +86,22 @@ def train_epoch(train_dataloader, model, criterion, optimizer, truncated_vgg19 =
             hr_imgs_in_vgg_space = truncated_vgg19(hr_imgs).detach()
 
             # Loss
-            loss = criterion(sr_imgs_in_vgg_space, hr_imgs_in_vgg_space)
+            loss = loss_function(sr_imgs_in_vgg_space, hr_imgs_in_vgg_space)
+
+            del sr_imgs_norm, sr_imgs_in_vgg_space, hr_imgs_in_vgg_space
 
         else:
-            # Loss
-            loss = criterion(sr_imgs, hr_imgs)
+            if criterion == "SSIM":
+                sr_imgs_y = convert_image(sr_imgs, source = "[-1, 1]", target = "[0, 255]")
+                hr_imgs_y = convert_image(hr_imgs, source = "[-1, 1]", target = "[0, 255]")
+
+                # Loss
+                loss = loss_function(sr_imgs_y, hr_imgs_y)
+
+                del sr_imgs_y, hr_imgs_y
+            else:
+                # Loss
+                loss = loss_function(sr_imgs, hr_imgs)
 
         # Backward propagation
         optimizer.zero_grad()
@@ -89,17 +114,17 @@ def train_epoch(train_dataloader, model, criterion, optimizer, truncated_vgg19 =
         # Update model
         optimizer.step()
 
-        sr_imgs_y = convert_image(sr_imgs, source = "[-1, 1]", target = "[0, 255]") # (w, h), in y-channel
-        hr_imgs_y = convert_image(hr_imgs, source = "[-1, 1]", target = "[0, 255]") # (w, h), in y-channel
+        sr_imgs_y = convert_image(sr_imgs, source = "[-1, 1]", target = "[0, 255]")
+        hr_imgs_y = convert_image(hr_imgs, source = "[-1, 1]", target = "[0, 255]")
 
         # Keep track of loss
-        total_loss += loss.item()
+        total_loss += float(loss.item())
 
         # Keep track of PSNR
-        total_psnr += piq.psnr(sr_imgs_y, hr_imgs_y, data_range = 255.0)
+        total_psnr += float(piq.psnr(sr_imgs_y, hr_imgs_y, data_range = 255.0))
 
         # Keep track of SSIM
-        total_ssim += piq.ssim(sr_imgs_y, hr_imgs_y, data_range = 255.0, downsample = True)
+        total_ssim += float(piq.ssim(sr_imgs_y, hr_imgs_y, data_range = 255.0, downsample = True))
 
         # Log last image to wandb
         if i == len(train_dataloader) - 1:
@@ -108,6 +133,10 @@ def train_epoch(train_dataloader, model, criterion, optimizer, truncated_vgg19 =
 
             sr_img_grid = make_grid(sr_imgs_y, normalize = True)
             wandb.log({"Super-Resolution Images": [wandb.Image(sr_img_grid)]})
+        
+        del lr_imgs, hr_imgs, sr_imgs, sr_imgs_y, hr_imgs_y
+
+    del hr_img_grid, sr_img_grid
 
     return total_loss / len(train_dataloader), total_psnr / len(train_dataloader), total_ssim / len(train_dataloader)
 
@@ -122,6 +151,20 @@ def validate_epoch(val_dataloader, model, criterion, truncated_vgg19 = None, wit
     with_VGG: flag indicating whether to use VGG feature loss
     """
     model.eval()  # Evaluation mode, no batch norm
+
+    # MSE Loss
+    if criterion == "MSE":
+        loss_function = nn.MSELoss()
+    # MAE Loss
+    if criterion == "MAE":
+        loss_function = nn.L1Loss()
+    # SSIM Loss
+    if criterion == "SSIM":
+        loss_function = piq.SSIMLoss(downsample = True, data_range = 255.0)
+
+    if with_VGG == True:
+        loss_function = nn.MSELoss()
+        print("Defaulting to MSE loss for VGG...")
 
     # Keep track of Loss/PSNR/SSIM
     total_loss = 0
@@ -147,27 +190,40 @@ def validate_epoch(val_dataloader, model, criterion, truncated_vgg19 = None, wit
                 hr_imgs_in_vgg_space = truncated_vgg19(hr_imgs).detach()
 
                 # Loss
-                loss = criterion(sr_imgs_in_vgg_space, hr_imgs_in_vgg_space)
+                loss = loss_function(sr_imgs_in_vgg_space, hr_imgs_in_vgg_space)
+
+                del sr_imgs_norm, sr_imgs_in_vgg_space, hr_imgs_in_vgg_space
 
             else:
-                # Loss
-                loss = criterion(sr_imgs, hr_imgs)
+                if criterion == "SSIM":
+                    sr_imgs_y = convert_image(sr_imgs, source = "[-1, 1]", target = "[0, 255]")
+                    hr_imgs_y = convert_image(hr_imgs, source = "[-1, 1]", target = "[0, 255]")
+
+                    # Loss
+                    loss = loss_function(sr_imgs_y, hr_imgs_y)
+
+                    del sr_imgs_y, hr_imgs_y
+                else:
+                    # Loss
+                    loss = loss_function(sr_imgs, hr_imgs)
             
-            sr_imgs_y = convert_image(sr_imgs, source = "[-1, 1]", target = "[0, 255]")  # (w, h), in y-channel
-            hr_imgs_y = convert_image(hr_imgs, source = "[-1, 1]", target = "[0, 255]")  # (w, h), in y-channel
+            sr_imgs_y = convert_image(sr_imgs, source = "[-1, 1]", target = "[0, 255]")
+            hr_imgs_y = convert_image(hr_imgs, source = "[-1, 1]", target = "[0, 255]")
 
             # Keep track of loss
-            total_loss += loss.item()
+            total_loss += float(loss.item())
 
             # Keep track of PSNR
-            total_psnr += piq.psnr(sr_imgs_y, hr_imgs_y, data_range = 255.0)
+            total_psnr += float(piq.psnr(sr_imgs_y, hr_imgs_y, data_range = 255.0))
 
             # Keep track of SSIM
-            total_ssim += piq.ssim(sr_imgs_y, hr_imgs_y, data_range = 255.0, downsample = True)
+            total_ssim += float(piq.ssim(sr_imgs_y, hr_imgs_y, data_range = 255.0, downsample = True))
+
+            del lr_imgs, hr_imgs, sr_imgs, sr_imgs_y, hr_imgs_y
 
     return total_loss / len(val_dataloader), total_psnr / len(val_dataloader), total_ssim / len(val_dataloader)
 
-def train(train_dataloader, val_dataloader, model, iterations, logger, with_VGG = False, VGG_params = (5, 4), criterion = "MSE", starting_epoch = 1, optimizer = "adam", checkpoint = None):
+def train(train_dataloader, val_dataloader, model, iterations, logger, with_VGG = False, VGG_params = (5, 4), criterion = "MSE", starting_epoch = 1, optimizer = "adam", grad_clip = None, checkpoint = None):
     """
     Training
     """
@@ -178,18 +234,14 @@ def train(train_dataloader, val_dataloader, model, iterations, logger, with_VGG 
     if (optimizer == "adam") and (checkpoint == None):
         optimizer = torch.optim.Adam(params = filter(lambda p: p.requires_grad, model.parameters()), lr = learning_rate)
     # SGD Nesterov
-    if (optimizer == "sgd") and (checkpoint == None):
+    if (optimizer == "sgd-n") and (checkpoint == None):
         optimizer = torch.optim.SGD(params = filter(lambda p: p.requires_grad, model.parameters()), lr = learning_rate, nesterov = True, momentum = 0.9)
+    # SGD
+    if (optimizer == "sgd") and (checkpoint == None):
+        optimizer = torch.optim.SGD(params = filter(lambda p: p.requires_grad, model.parameters()), lr = learning_rate)
 
     # Move to default device
     model = model.to(device)
-
-    # MSE Loss
-    if criterion == "MSE":
-        criterion = nn.MSELoss().to(device)
-    # SSIM Loss
-    if criterion == "SSIM":
-        criterion = piq.SSIMLoss(downsample = True)
 
     # Apply VGG (if desired)
     truncated_vgg19 = TruncatedVGG19(i = VGG_params[0], j = VGG_params[1])
@@ -200,8 +252,12 @@ def train(train_dataloader, val_dataloader, model, iterations, logger, with_VGG 
 
     # Epochs
     for epoch in range(starting_epoch, epochs + 1):
+        # At the halfway point, reduce learning rate by a tenth
+        if epoch == int(epochs // 2):
+            adjust_learning_rate(optimizer, 0.1)
+
         # Train and validation epoch
-        train_loss, train_psnr, train_ssim = train_epoch(train_dataloader, model = model, criterion = criterion, optimizer = optimizer, truncated_vgg19 = truncated_vgg19, with_VGG = with_VGG)
+        train_loss, train_psnr, train_ssim = train_epoch(train_dataloader, model = model, criterion = criterion, optimizer = optimizer, truncated_vgg19 = truncated_vgg19, with_VGG = with_VGG, grad_clip = grad_clip)
         val_loss, val_psnr, val_ssim = validate_epoch(val_dataloader, model = model, criterion = criterion, truncated_vgg19 = truncated_vgg19, with_VGG = with_VGG)
 
         print(f"Epoch: {epoch} / {epochs}, Train Loss {train_loss}, Validation Loss {val_loss}, Train PSNR {train_psnr}, Validation PSNR {val_psnr}, Train SSIM {train_ssim}, Validation SSIM {val_ssim}")
@@ -215,7 +271,7 @@ def train(train_dataloader, val_dataloader, model, iterations, logger, with_VGG 
         logger.log({"train_ssim": train_ssim})
         logger.log({"validation_ssim": val_ssim})
 
-        if (val_loss + 0.00000001) < val_losses[epoch - 1]:
+        if (val_loss + 0.00000001) < val_losses[-2]:
             # Restart patience (improvement in validation loss)
             counter = 0
 
@@ -239,11 +295,11 @@ def train(train_dataloader, val_dataloader, model, iterations, logger, with_VGG 
                         "val_ssim": val_ssim},
                         checkpoint_path)
 
-        elif (val_loss + 0.00000001) > val_losses[epoch - 1]:
+        elif (val_loss + 0.00000001) > val_losses[-2]:
             # Add one to patience
             counter += 1
 
-            if val_loss < val_losses[epoch - 1]:
+            if val_loss < val_losses[-2]:
                 # Create checkpoint folder
                 if not os.path.exists("checkpoints"):
                     os.makedirs("checkpoints")
@@ -279,17 +335,17 @@ def main():
     np.random.seed(randomer)
 
     # Read settings from the YAML file
-    args = parse_arguments()
-    settings = read_settings(args.config)
+    #args = parse_arguments()
+    #settings = read_settings(args.config)
 
     # Access and use the settings as needed
-    model_settings = settings.get("model", {})
-    train_settings = settings.get("train", {})
+    #model_settings = settings.get("model", {})
+    #train_settings = settings.get("train", {})
     #print(model_settings)
     #print(train_settings)
 
     # Initialise 'wandb' for logging
-    wandb_logger = Logger(f"inm705_SRResNet", project = "inm705_cwk")
+    wandb_logger = Logger(f"inm705_SRResNet_Adam_MAE_adaptive_lr_no_batch_norm_gelu_kernel_5", project = "inm705_cwk")
     logger = wandb_logger.get_logger()
 
     # Custom dataloaders
@@ -303,14 +359,14 @@ def main():
 
     if checkpoint is None:
         model = SRResNet(large_kernel_size = large_kernel_size, small_kernel_size = small_kernel_size, n_channels = n_channels, n_blocks = n_blocks, scaling_factor = scaling_factor)
-        train(train_dataloader, val_dataloader, model, iterations, logger, with_VGG = False, VGG_params = (5, 4), criterion = "MSE", starting_epoch = 1, optimizer = "adam", checkpoint = None)
+        train(train_dataloader, val_dataloader, model, iterations, logger, with_VGG = False, VGG_params = (5, 4), criterion = "MAE", starting_epoch = 1, optimizer = "adam", grad_clip = grad_clip, checkpoint = None)
 
     else:
         checkpoint = torch.load(checkpoint)
         starting_epoch = checkpoint["epoch"] + 1
         model = checkpoint["model"]
         optimizer = checkpoint["optimizer"]
-        train(train_dataloader, val_dataloader, model, iterations, logger, VGG_params = (5, 4), criterion = "MSE", starting_epoch = starting_epoch, optimizer = optimizer, checkpoint = checkpoint)
+        train(train_dataloader, val_dataloader, model, iterations, logger, VGG_params = (5, 4), criterion = "MAE", starting_epoch = starting_epoch, optimizer = optimizer, grad_clip = grad_clip, checkpoint = checkpoint)
 
 if __name__ == "__main__":
     main()

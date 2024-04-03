@@ -2,6 +2,8 @@ import torch
 from torch import nn
 import torchvision
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 class TruncatedVGG19(nn.Module):
     """
     A truncated VGG19 network, such that its output is the "feature map obtained by the j-th convolution (after activation)
@@ -43,7 +45,7 @@ class TruncatedVGG19(nn.Module):
             i, j)
 
         # Truncate to the jth convolution (+ activation) before the ith maxpool layer
-        self.truncated_vgg19 = nn.Sequential(*list(vgg19.features.children())[:truncate_at + 1])
+        self.truncated_vgg19 = nn.Sequential(*list(vgg19.features.children())[:truncate_at + 1]).to(device)
 
     def forward(self, input):
         """

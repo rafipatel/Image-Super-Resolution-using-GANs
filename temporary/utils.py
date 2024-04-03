@@ -33,11 +33,11 @@ def create_data_lists(train_folders, val_folders, test_folders, min_size, output
     for d in train_folders:
         for i in os.listdir(d):
             img_path = os.path.join(d, i)
-            img = Image.open(img_path, mode='r')
+            img = Image.open(img_path, mode = "r")
             if img.width >= min_size and img.height >= min_size:
                 train_images.append(img_path)
     print("There are %d images in the training data.\n" % len(train_images))
-    with open(os.path.join(output_folder, 'train_images.json'), 'w') as j:
+    with open(os.path.join(output_folder, "train_images.json"), "w") as j:
         json.dump(train_images, j)
 
     # Validation data
@@ -45,11 +45,11 @@ def create_data_lists(train_folders, val_folders, test_folders, min_size, output
     for d in val_folders:
         for i in os.listdir(d):
             img_path = os.path.join(d, i)
-            img = Image.open(img_path, mode='r')
+            img = Image.open(img_path, mode = "r")
             if img.width >= min_size and img.height >= min_size:
                 val_images.append(img_path)
     print("There are %d images in the validation data.\n" % len(val_images))
-    with open(os.path.join(output_folder, 'val_images.json'), 'w') as j:
+    with open(os.path.join(output_folder, "val_images.json"), "w") as j:
         json.dump(val_images, j)
 
     # Test data
@@ -58,11 +58,11 @@ def create_data_lists(train_folders, val_folders, test_folders, min_size, output
         test_name = d.split("/")[-1]
         for i in os.listdir(d):
             img_path = os.path.join(d, i)
-            img = Image.open(img_path, mode='r')
+            img = Image.open(img_path, mode = "r")
             if img.width >= min_size and img.height >= min_size:
                 test_images.append(img_path)
         print("There are %d images in the %s test data.\n" % (len(test_images), test_name))
-        with open(os.path.join(output_folder, test_name + '_test_images.json'), 'w') as j:
+        with open(os.path.join(output_folder, test_name + "_test_images.json"), "w") as j:
             json.dump(test_images, j)
 
     print("JSONs containing lists of Train, Validation, and Test images have been saved to %s\n" % output_folder)
@@ -126,11 +126,11 @@ class ImageTransforms(object):
 
     def __init__(self, split, crop_size, scaling_factor, lr_img_type, hr_img_type):
         """
-        :param split: one of 'train', 'val', or 'test'
-        :param crop_size: crop size of HR images
-        :param scaling_factor: LR images will be downsampled from the HR images by this factor
-        :param lr_img_type: the target format for the LR image; see convert_image() above for available formats
-        :param hr_img_type: the target format for the HR image; see convert_image() above for available formats
+        split: one of "train", "val", or "test"
+        crop_size: crop size of HR images
+        scaling_factor: LR images will be downsampled from the HR images by this factor
+        lr_img_type: the target format for the LR image; see convert_image() above for available formats
+        hr_img_type: the target format for the HR image; see convert_image() above for available formats
         """
         self.split = split.lower()
         self.crop_size = crop_size
@@ -138,16 +138,16 @@ class ImageTransforms(object):
         self.lr_img_type = lr_img_type
         self.hr_img_type = hr_img_type
 
-        assert self.split in {'train', 'val', 'test'}
+        assert self.split in {"train", "val", "test"}
 
     def __call__(self, img):
         """
-        :param img: a PIL source image from which the HR image will be cropped, and then downsampled to create the LR image
-        :return: LR and HR images in the specified format
+        img: a PIL source image from which the HR image will be cropped, and then downsampled to create the LR image
+        return: LR and HR images in the specified format
         """
 
         # Crop
-        if self.split == 'train':
+        if self.split == "train":
             # Take a random fixed-size crop of the image, which will serve as the high-resolution (HR) image
             left = random.randint(1, img.width - self.crop_size)
             top = random.randint(1, img.height - self.crop_size)
@@ -172,8 +172,8 @@ class ImageTransforms(object):
         assert hr_img.width == lr_img.width * self.scaling_factor and hr_img.height == lr_img.height * self.scaling_factor
 
         # Convert the LR and HR image to the required type
-        lr_img = convert_image(lr_img, source='pil', target=self.lr_img_type)
-        hr_img = convert_image(hr_img, source='pil', target=self.hr_img_type)
+        lr_img = convert_image(lr_img, source="pil", target=self.lr_img_type)
+        hr_img = convert_image(hr_img, source="pil", target=self.hr_img_type)
 
         return lr_img, hr_img
 
@@ -181,8 +181,8 @@ def clip_gradient(optimizer, grad_clip):
     """
     Clips gradients computed during backpropagation to avoid explosion of gradients.
 
-    :param optimizer: optimizer with the gradients to be clipped
-    :param grad_clip: clip value
+    optimizer: optimizer with the gradients to be clipped
+    grad_clip: clip value
     """
     for group in optimizer.param_groups:
         for param in group["params"]:
@@ -203,8 +203,8 @@ def adjust_learning_rate(optimizer, shrink_factor):
     """
     Shrinks learning rate by a specified factor.
 
-    :param optimizer: optimizer whose learning rate must be shrunk.
-    :param shrink_factor: factor in interval (0, 1) to multiply learning rate with.
+    optimizer: optimizer whose learning rate must be shrunk.
+    shrink_factor: factor in interval (0, 1) to multiply learning rate with.
     """
 
     print("\nDECAYING learning rate.")
