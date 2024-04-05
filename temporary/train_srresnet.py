@@ -46,6 +46,7 @@ def train_epoch(train_dataloader, model, criterion, optimizer, truncated_vgg19 =
     optimizer: optimizer
     truncated_vgg19: truncated VGG19 model for feature extraction
     with_VGG: flag indicating whether to use VGG feature loss
+    grad_clip: gradient clipping
     """
     model.train()  # training mode enables batch normalisation
     

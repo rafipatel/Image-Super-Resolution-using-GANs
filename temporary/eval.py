@@ -1,13 +1,14 @@
 from utils import *
 from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 from datasets import SRDataset
+import torch
 import numpy as np
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Data
 data_folder = "./"
-test_data_names = ["Set5"]
+test_data_names = ["Set5", "Set14", "BSDS100"]
 
 # Model checkpoints
 srgan_checkpoint = "checkpoint_srgan.pth.tar"

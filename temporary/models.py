@@ -212,12 +212,11 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
 
         # The generator is simply an SRResNet, as above
-        self.net = SRResNet(large_kernel_size = large_kernel_size, small_kernel_size = small_kernel_size,
-                            n_channels = n_channels, n_blocks = n_blocks, scaling_factor = scaling_factor, add_extra_conv = False)
+        self.net = SRResNet(large_kernel_size = large_kernel_size, small_kernel_size = small_kernel_size, n_channels = n_channels, n_blocks = n_blocks, scaling_factor = scaling_factor)
 
-    def initialize_with_srresnet(self, srresnet_checkpoint):
+    def initialise_with_srresnet(self, srresnet_checkpoint):
         """
-        Initialize with weights from a trained SRResNet.
+        Initialise with weights from a trained SRResNet.
 
         srresnet_checkpoint: checkpoint filepath
         """
@@ -261,8 +260,8 @@ class Discriminator(nn.Module):
         for i in range(n_blocks):
             out_channels = (n_channels if i is 0 else in_channels * 2) if i % 2 is 0 else in_channels
             conv_blocks.append(
-                ConvolutionalBlock(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
-                                   stride=1 if i % 2 is 0 else 2, batch_norm=i is not 0, activation="LeakyReLu"))
+                ConvolutionalBlock(in_channels = in_channels, out_channels = out_channels, kernel_size = kernel_size,
+                                   stride = 1 if i % 2 is 0 else 2, batch_norm = i is not 0, activation = "LeakyReLU"))
             in_channels = out_channels
         self.conv_blocks = nn.Sequential(*conv_blocks)
 
@@ -276,11 +275,9 @@ class Discriminator(nn.Module):
 
         self.fc2 = nn.Linear(1024, 1)
 
-        # Don"t need a sigmoid layer because the sigmoid operation is performed by PyTorch"s nn.BCEWithLogitsLoss()
-
     def forward(self, imgs):
         """
-        Forward propagation.
+        Forward propagation
 
         imgs: high-resolution or super-resolution images which must be classified as such, a tensor of size (N, 3, w * scaling factor, h * scaling factor)
         returns: a score (logit) for whether it is a high-resolution image, a tensor of size (N)

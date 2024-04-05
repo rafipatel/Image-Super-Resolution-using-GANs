@@ -78,7 +78,7 @@ def convert_image(img, source, target):
                    "y-channel" (luminance channel Y in the YCbCr color format, used to calculate PSNR and SSIM)
     :return: converted image
     """
-    assert source in {"pil", "[0, 1]", "[-1, 1]"}, "Cannot convert from source format %s!" % source
+    assert source in {"pil", "[0, 1]", "[-1, 1]", "imagenet-norm"}, "Cannot convert from source format %s!" % source
     assert target in {"pil", "[0, 255]", "[0, 1]", "[-1, 1]", "imagenet-norm",
                       "y-channel"}, "Cannot convert to target format %s!" % target
 
@@ -91,6 +91,12 @@ def convert_image(img, source, target):
 
     elif source == "[-1, 1]":
         img = (img + 1.) / 2.
+    
+    elif source == "imagenet-norm":
+        if img.ndimension() == 3:
+            img = img * imagenet_std + imagenet_mean
+        elif img.ndimension() == 4:
+            img = img * imagenet_std_cuda + imagenet_mean_cuda
 
     # Convert from [0, 1] to target
     if target == "pil":
