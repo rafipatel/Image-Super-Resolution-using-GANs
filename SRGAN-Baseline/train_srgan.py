@@ -296,14 +296,15 @@ def main():
     #print(train_settings)
 
     # Initialise 'wandb' for logging
-    wandb_logger = Logger(f"inm705_SRGAN", project = "inm705_cwk")
+    wandb_logger = Logger(f"inm705_SRGAN_Adam-x2_MSE", project = "inm705_cwk")
     logger = wandb_logger.get_logger()
 
     # Custom dataloaders
     train_dataset = SRDataset(data_folder, split = "train", crop_size = crop_size, scaling_factor = scaling_factor, lr_img_type = "imagenet-norm", hr_img_type = "imagenet-norm")
     train_dataloader = DataLoader(train_dataset, batch_size = batch_size, shuffle = True, num_workers = workers, pin_memory = True)  # note that we're passing the collate function here
 
-    checkpoint = None
+    checkpoint = None # train from scratch, without a checkpoint
+    #checkpoint = "checkpoints/checkpoint_srgan.pth.tar" # use if wanting to train from a checkpoint
 
     if checkpoint is None:
         # Generator
