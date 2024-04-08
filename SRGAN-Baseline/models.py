@@ -118,11 +118,11 @@ class ResidualBlock(nn.Module):
 
         # The first convolutional block
         self.conv_block1 = ConvolutionalBlock(in_channels = n_channels, out_channels = n_channels, kernel_size = kernel_size,
-                                              batch_norm = False, activation = activation)
+                                              batch_norm = True, activation = activation)
 
         # The second convolutional block
         self.conv_block2 = ConvolutionalBlock(in_channels = n_channels, out_channels = n_channels, kernel_size = kernel_size,
-                                              batch_norm = False, activation = None)
+                                              batch_norm = True, activation = None)
         
     def forward(self, input):
         """
@@ -159,20 +159,20 @@ class SRResNet(nn.Module):
 
         # The first convolutional block
         self.conv_block1 = ConvolutionalBlock(in_channels = 3, out_channels = n_channels, kernel_size = large_kernel_size,
-                                              batch_norm = False, activation = "GELU")
+                                              batch_norm = False, activation = "PReLU")
 
         # A sequence of n_blocks residual blocks, each containing a skip-connection across the block
         self.residual_blocks = nn.Sequential(
-            *[ResidualBlock(kernel_size = small_kernel_size, n_channels = n_channels, activation = "GELU") for i in range(n_blocks)])
+            *[ResidualBlock(kernel_size = small_kernel_size, n_channels = n_channels, activation = "PReLU") for i in range(n_blocks)])
 
         # Another convolutional block
         self.conv_block2 = ConvolutionalBlock(in_channels = n_channels, out_channels = n_channels, kernel_size = small_kernel_size,
-                                              batch_norm = False, activation = None)
+                                              batch_norm = True, activation = None)
 
         # Upscaling is done by sub-pixel convolution, with each such block upscaling by a factor of 2
         n_subpixel_convolution_blocks = int(math.log2(scaling_factor))
         self.subpixel_convolutional_blocks = nn.Sequential(
-            *[SubPixelConvolutionalBlock(kernel_size = small_kernel_size, n_channels = n_channels, scaling_factor = 2, activation = "GELU") for i
+            *[SubPixelConvolutionalBlock(kernel_size = small_kernel_size, n_channels = n_channels, scaling_factor = 2, activation = "PReLU") for i
               in range(n_subpixel_convolution_blocks)])
 
         # The last convolutional block
