@@ -1,0 +1,2 @@
+"Download 'checkpoint_srresnet.pth.tar' from baseline models and replace with this file (only if you want to perform inference on our SRGAN model or to finetune/continue training)"
+"Note: this is needed for training SRGAN, because SRResNet is the generator"
