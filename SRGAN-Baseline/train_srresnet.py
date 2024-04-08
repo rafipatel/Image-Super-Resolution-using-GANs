@@ -19,7 +19,7 @@ scaling_factor = 4  # the scaling factor; the input LR images will be downsample
 
 # Model parameters
 large_kernel_size = 9  # kernel size of the first and last convolutions which transform the inputs and outputs
-small_kernel_size = 5  # kernel size of all convolutions in-between, i.e. those in the residual and subpixel convolutional blocks
+small_kernel_size = 3  # kernel size of all convolutions in-between, i.e. those in the residual and subpixel convolutional blocks
 n_channels = 64  # number of channels in-between, i.e. the input and output channels for the residual and subpixel convolutional blocks
 n_blocks = 16  # number of residual blocks
 
@@ -30,7 +30,7 @@ start_epoch = 0  # start at this epoch
 iterations = 1000000  # number of training iterations
 workers = 4  # number of workers for loading data in the DataLoader
 learning_rate = 0.0001  # learning rate
-grad_clip = 0.1  # clip if gradients are exploding
+grad_clip = None  # clip if gradients are exploding
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -346,7 +346,7 @@ def main():
     #print(train_settings)
 
     # Initialise 'wandb' for logging
-    wandb_logger = Logger(f"inm705_SRResNet_Adam_MAE_adaptive_lr_no_batch_norm_gelu_kernel_5", project = "inm705_cwk")
+    wandb_logger = Logger(f"inm705_SRResNet_Adam_MSE", project = "inm705_cwk")
     logger = wandb_logger.get_logger()
 
     # Custom dataloaders
@@ -356,18 +356,19 @@ def main():
     val_dataset = SRDataset(data_folder, split = "val", crop_size = 0, scaling_factor = scaling_factor, lr_img_type = "imagenet-norm", hr_img_type = "[-1, 1]")
     val_dataloader = DataLoader(val_dataset, batch_size = 1, shuffle = True, num_workers = workers, pin_memory = True)  # note that we're passing the collate function here
 
-    checkpoint = None
+    checkpoint = None # train from scratch, without a checkpoint
+    #checkpoint = "checkpoints/checkpoint_srresnet.pth.tar" # use if wanting to train from a checkpoint
 
     if checkpoint is None:
         model = SRResNet(large_kernel_size = large_kernel_size, small_kernel_size = small_kernel_size, n_channels = n_channels, n_blocks = n_blocks, scaling_factor = scaling_factor)
-        train(train_dataloader, val_dataloader, model, iterations, logger, with_VGG = False, VGG_params = (5, 4), criterion = "MAE", starting_epoch = 1, optimizer = "adam", grad_clip = grad_clip, checkpoint = None)
+        train(train_dataloader, val_dataloader, model, iterations, logger, with_VGG = False, VGG_params = (5, 4), criterion = "MSE", starting_epoch = 1, optimizer = "adam", grad_clip = grad_clip, checkpoint = None)
 
     else:
         checkpoint = torch.load(checkpoint)
         starting_epoch = checkpoint["epoch"] + 1
         model = checkpoint["model"]
         optimizer = checkpoint["optimizer"]
-        train(train_dataloader, val_dataloader, model, iterations, logger, VGG_params = (5, 4), criterion = "MAE", starting_epoch = starting_epoch, optimizer = optimizer, grad_clip = grad_clip, checkpoint = checkpoint)
+        train(train_dataloader, val_dataloader, model, iterations, logger, VGG_params = (5, 4), criterion = "MSE", starting_epoch = starting_epoch, optimizer = optimizer, grad_clip = grad_clip, checkpoint = checkpoint)
 
 if __name__ == "__main__":
     main()
