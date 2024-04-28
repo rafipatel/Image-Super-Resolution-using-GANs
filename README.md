@@ -17,9 +17,9 @@ Super-resolution is a computer vision task that aims to improve the resolution o
 
 **SRResNet (Super-Resolution Residual Network)**
 
-At the core of SRGAN lies the SRResNet, a deep residual network that forms the backbone of the generator. The SRResNet architecture is inspired by the ResNet architecture and is optimized for super-resolution tasks. It learns to map low-resolution images to high-resolution ones by capturing intricate details and features through multiple layers.
+SRResNet is a deep residual network. The SRResNet architecture is inspired by the ResNet architecture and is optimized for super-resolution tasks. It learns to map low-resolution images to high-resolution ones by capturing intricate details and features through multiple layers.
 
-**SRGAN ( Super-Resolution Generative Adversarial Network) Architecture**
+**SRGAN ( Super-Resolution Generative Adversarial Network)**
 
 SRGAN combines the SRResNet with an adversarial network, consisting of a discriminator and a generator. The discriminator learns to differentiate between real high-resolution images and generated high-resolution images, while the generator aims to produce high-quality images that are indistinguishable from real ones. This adversarial training process encourages the generator to generate more realistic and visually pleasing high-resolution images.
 
