@@ -18,18 +18,9 @@ The training process involves optimizing the SRGAN and SRResNet model to generat
 ### Evaluation
 After training, you can evaluate the trained model on a separate validation dataset. The evaluation script computes metrics such as loss, PSNR (Peak Signal-to-Noise Ratio), and SSIM (Structural Similarity Index) to assess the performance of the model.
 
-### Acknowledgements
-- The SRResNet model architecture and training procedure are based on the paper: "Photo-Realistic Single Image Super-Resolution Using a Generative Adversarial Network" by Christian Ledig et al.
-- This implementation borrows concepts from various open-source repositories and research papers in the field of image super-resolution.
-
-Feel free to contribute, report issues, or suggest improvements to this repository. Happy coding!
-
-
-## Overview
-This project implements a Super-Resolution Generative Adversarial Network (SRGAN) using PyTorch. SRGANs are used for enhancing the resolution of images, allowing low-resolution images to be converted into high-resolution ones.
-
 ## Features
 - Implementation of SRGAN architecture with both generator and discriminator networks.
+- Implementation of SRResNet architecture with both generator and discriminator networks.
 - Supports different loss functions for content and adversarial losses.
 - Training pipeline with logging using Weights & Biases (wandb).
 - Checkpointing mechanism to save and resume training from a specific epoch.
@@ -73,8 +64,12 @@ This project implements a Super-Resolution Generative Adversarial Network (SRGAN
 
 
 ## Acknowledgments
-- This project is inspired by the original SRGAN paper by Ledig et al. (2017).
-- Code structure and design influenced by various open-source implementations of GANs and SRGANs.
+- The SRResNet model architecture and training procedure are based on the paper: "Photo-Realistic Single Image Super-Resolution Using a Generative Adversarial Network" by Christian Ledig et al.
+- This implementation borrows concepts from various open-source repositories and research papers in the field of image super-resolution.
+- Code structure and design influenced by various open-source implementations of GANs, SRGANs and SRResNets.
+
+Feel free to contribute, report issues, or suggest improvements to this repository. Happy coding!
+
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
