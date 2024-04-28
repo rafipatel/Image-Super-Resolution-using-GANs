@@ -61,14 +61,16 @@ After training, you can evaluate the trained model on a separate validation data
    git clone https://github.com/rafipatel/Image-Super-Resolution-using-GANs.git
    ```
 
-2. Install dependencies:
+2. Change directory as required.
+
+3. Install dependencies:
    ```
    pip install -r requirements.txt
    ```
 
-3. Prepare your dataset by placing high-resolution images in a folder. Update the dataset path in the configuration file (`config.yaml`).
+4. Prepare your dataset by placing high-resolution images in a folder. Update the dataset path in the configuration file (`config.yaml`).
 
-4. Train the model:
+5. Train the model:
    ```
    python train.py --config config.yaml
    ```
