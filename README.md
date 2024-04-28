@@ -1,66 +1,80 @@
-# Image-Super-Resolution-using-GANs
+**Super-Resolution with SRGAN and SRResNet**
+
+This repository contains a PyTorch implementation of the Super-Resolution Generative Adversarial Network (SRGAN) & Super-Resolution Convolutional Neural Network (SRResNet) for enhancing the resolution of images. SRGAN and SRResNet are deep learning architecture capable of generating high-resolution images from low-resolution inputs.
+
+### Table of Contents
+1. [Introduction](#introduction)
+2. [Requirements](#requirements)
+3. [Training](#training)
+4. [Evaluation](#evaluation)
+5. [Acknowledgements](#acknowledgements)
+
+### Introduction
+Super-resolution is a computer vision task that aims to improve the resolution of an image. The SRResNet model utilizes a deep neural network architecture to enhance the details and quality of low-resolution images. This implementation includes training and evaluation scripts, along with utilities for data loading, logging, and model checkpoints.
+
+### Training
+The training process involves optimizing the SRResNet model to generate high-quality images. You can customize various parameters such as batch size, learning rate, optimizer, and loss function in the configuration file.
+
+### Evaluation
+After training, you can evaluate the trained model on a separate validation dataset. The evaluation script computes metrics such as loss, PSNR (Peak Signal-to-Noise Ratio), and SSIM (Structural Similarity Index) to assess the performance of the model.
+
+### Acknowledgements
+- The SRResNet model architecture and training procedure are based on the paper: "Photo-Realistic Single Image Super-Resolution Using a Generative Adversarial Network" by Christian Ledig et al.
+- This implementation borrows code and concepts from various open-source repositories and research papers in the field of image super-resolution.
+
+Feel free to contribute, report issues, or suggest improvements to this repository. Happy coding!
 
 
+## Overview
+This project implements a Super-Resolution Generative Adversarial Network (SRGAN) using PyTorch. SRGANs are used for enhancing the resolution of images, allowing low-resolution images to be converted into high-resolution ones.
 
-## Image Super Resolution using Generative Adversarial Networks (GANs)
+## Features
+- Implementation of SRGAN architecture with both generator and discriminator networks.
+- Supports different loss functions for content and adversarial losses.
+- Training pipeline with logging using Weights & Biases (wandb).
+- Checkpointing mechanism to save and resume training from a specific epoch.
 
-This repository implements a simple Image Super Resolution (SR) model using Generative Adversarial Networks (GANs). The goal is to upscale low-resolution images to a higher resolution while preserving details and reducing artifacts.
+## Requirements
+- Python 3.6+
+- PyTorch
+- wandb (Weights & Biases)
+- torchvision
+- piq (Perceptual Image Quality metrics)
+- torcheval (for Frechet Inception Distance)
+- numpy
 
-### Getting Started
+## File Structure
+- `train.py`: Main script to initiate training.
+- `models.py`: Contains the definitions of the generator and discriminator networks (i.e. Model Architecture).
+- `datasets.py`: Defines custom datasets and data loaders.
+- `utils.py`: Utility functions for image conversion, etc.
+- `logger.py`: Logger class for logging training metrics to wandb.
+- `loss.py`: Custom loss functions used in training.
+- `checkpoints/`: Directory to save model checkpoints during training.
 
-**Prerequisites:**
 
-
-
-**Installation:**
-
-1. Clone this repository:
-
-   ```bash
-   git clone https://github.com/<your-username>/Image-Super-Resolution-using-GANs.git
+### Usage
+1. Clone the repository:
+   ```
+   git clone https://github.com/rafipatel/Image-Super-Resolution-using-GANs.git
    ```
 
-2. Install the required dependencies:
-
-   ```bash
+2. Install dependencies:
+   ```
    pip install -r requirements.txt
    ```
 
-### Usage
+3. Prepare your dataset by placing high-resolution images in a folder. Update the dataset path in the configuration file (`config.yaml`).
 
-1. Train the model:
-
-   ```bash
-   python train.py
+4. Train the model:
+   ```
+   python train.py --config config.yaml
    ```
 
-   This script trains the SR-GAN model on a dataset of low-resolution and high-resolution image pairs. The script allows you to customize various parameters like the number of epochs, batch size, and model architecture.
 
-2. Evaluate the model:
+## Acknowledgments
+- This project is inspired by the original SRGAN paper by Ledig et al. (2017).
+- Code structure and design influenced by various open-source implementations of GANs and SRGANs.
 
-   ```bash
-   python evaluate.py
-   ```
-
-   This script evaluates the trained model on a separate test set and provides metrics like Peak Signal-to-Noise Ratio (PSNR) and Structural Similarity Index Measure (SSIM) to assess the quality of the generated super-resolution images.
-
-3. Generate super-resolution images:
-
-   ```bash
-   python predict.py <low_resolution_image_path>
-   ```
-
-   This script takes a low-resolution image path as input and generates a super-resolution version of the image using the trained model.
-
-### Contributing
-
-We welcome contributions to this project! Feel free to fork the repository and submit pull requests with your improvements.
-
-### License
-
-This project is licensed under the MIT License. See the LICENSE file for details.
-
-**Note:**
-
-* This is a basic example and can be extended in various ways. You can experiment with different GAN architectures, loss functions, and evaluation metrics.
-* Include the dataset you used for training and evaluation in your repository or provide instructions on how to obtain it, if possible. 
+## License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
