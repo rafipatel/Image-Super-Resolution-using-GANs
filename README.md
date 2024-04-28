@@ -29,10 +29,7 @@ SRGAN combines the SRResNet with an adversarial network, consisting of a discrim
 - Python 3.6+
 - PyTorch
 - wandb (Weights & Biases)
-- torchvision
-- piq (Perceptual Image Quality metrics)
-- torcheval (for Frechet Inception Distance)
-- numpy
+- All other requirements listed in **requirements.txt**
 
 ### Features
 - Implementation of SRGAN architecture with both generator and discriminator networks.
