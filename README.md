@@ -1,5 +1,8 @@
 **Super-Resolution with SRGAN and SRResNet**
 
+
+### Overview
+
 This repository contains a PyTorch implementation of the Super-Resolution Generative Adversarial Network (SRGAN) & Super-Resolution Convolutional Neural Network (SRResNet) for enhancing the resolution of images. SRGAN and SRResNet are deep learning architecture capable of generating high-resolution images from low-resolution inputs.
 
 ### Table of Contents
@@ -10,7 +13,13 @@ This repository contains a PyTorch implementation of the Super-Resolution Genera
 5. [Acknowledgements](#acknowledgements)
 
 ### Introduction
-Super-resolution is a computer vision task that aims to improve the resolution of an image. The SRResNet model utilizes a deep neural network architecture to enhance the details and quality of low-resolution images. This implementation includes training and evaluation scripts, along with utilities for data loading, logging, and model checkpoints.
+Super-resolution is a computer vision task that aims to improve the resolution of an image. These models utilizes a deep neural network architecture to enhance the details and quality of low-resolution images. This implementation includes training and evaluation scripts, along with utilities for data loading, logging, and model checkpoints.
+
+**SRResNet (Super-Resolution Residual Network)**
+At the core of SRGAN lies the SRResNet, a deep residual network that forms the backbone of the generator. The SRResNet architecture is inspired by the ResNet architecture and is optimized for super-resolution tasks. It learns to map low-resolution images to high-resolution ones by capturing intricate details and features through multiple layers.
+
+**SRGAN ( Super-Resolution Generative Adversarial Network) Architecture**
+SRGAN combines the SRResNet with an adversarial network, consisting of a discriminator and a generator. The discriminator learns to differentiate between real high-resolution images and generated high-resolution images, while the generator aims to produce high-quality images that are indistinguishable from real ones. This adversarial training process encourages the generator to generate more realistic and visually pleasing high-resolution images.
 
 ### Training
 The training process involves optimizing the SRGAN and SRResNet model to generate high-quality images. You can customize various parameters such as batch size, learning rate, optimizer, and loss function in the configuration file.
