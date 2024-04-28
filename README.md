@@ -14,6 +14,7 @@ This repository contains a PyTorch implementation of the Super-Resolution Genera
 6. [ File Structure](#FileStructure)
 7. [Usage](#usage)
 8. [Acknowledgements](#acknowledgements)
+9. [License](#License)
 
 ### Introduction
 Super-resolution is a computer vision task that aims to improve the resolution of an image. These models utilizes a deep neural network architecture to enhance the details and quality of low-resolution images. This implementation includes training and evaluation scripts, along with utilities for data loading, logging, and model checkpoints.
