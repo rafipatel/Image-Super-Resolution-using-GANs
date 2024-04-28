@@ -13,7 +13,7 @@ This repository contains a PyTorch implementation of the Super-Resolution Genera
 Super-resolution is a computer vision task that aims to improve the resolution of an image. The SRResNet model utilizes a deep neural network architecture to enhance the details and quality of low-resolution images. This implementation includes training and evaluation scripts, along with utilities for data loading, logging, and model checkpoints.
 
 ### Training
-The training process involves optimizing the SRResNet model to generate high-quality images. You can customize various parameters such as batch size, learning rate, optimizer, and loss function in the configuration file.
+The training process involves optimizing the SRGAN and SRResNet model to generate high-quality images. You can customize various parameters such as batch size, learning rate, optimizer, and loss function in the configuration file.
 
 ### Evaluation
 After training, you can evaluate the trained model on a separate validation dataset. The evaluation script computes metrics such as loss, PSNR (Peak Signal-to-Noise Ratio), and SSIM (Structural Similarity Index) to assess the performance of the model.
