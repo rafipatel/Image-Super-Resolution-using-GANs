@@ -20,7 +20,7 @@ After training, you can evaluate the trained model on a separate validation data
 
 ### Acknowledgements
 - The SRResNet model architecture and training procedure are based on the paper: "Photo-Realistic Single Image Super-Resolution Using a Generative Adversarial Network" by Christian Ledig et al.
-- This implementation borrows code and concepts from various open-source repositories and research papers in the field of image super-resolution.
+- This implementation borrows concepts from various open-source repositories and research papers in the field of image super-resolution.
 
 Feel free to contribute, report issues, or suggest improvements to this repository. Happy coding!
 
