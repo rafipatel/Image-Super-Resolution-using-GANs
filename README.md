@@ -8,9 +8,12 @@ This repository contains a PyTorch implementation of the Super-Resolution Genera
 ### Table of Contents
 1. [Introduction](#introduction)
 2. [Requirements](#requirements)
-3. [Training](#training)
-4. [Evaluation](#evaluation)
-5. [Acknowledgements](#acknowledgements)
+3. [Features](#features)
+4. [Training](#training)
+5. [Evaluation](#evaluation)
+6. [ File Structure](#FileStructure)
+7. [Usage](#usage)
+8. [Acknowledgements](#acknowledgements)
 
 ### Introduction
 Super-resolution is a computer vision task that aims to improve the resolution of an image. These models utilizes a deep neural network architecture to enhance the details and quality of low-resolution images. This implementation includes training and evaluation scripts, along with utilities for data loading, logging, and model checkpoints.
@@ -23,20 +26,7 @@ SRResNet is a deep residual network. The SRResNet architecture is inspired by th
 
 SRGAN combines the SRResNet with an adversarial network, consisting of a discriminator and a generator. The discriminator learns to differentiate between real high-resolution images and generated high-resolution images, while the generator aims to produce high-quality images that are indistinguishable from real ones. This adversarial training process encourages the generator to generate more realistic and visually pleasing high-resolution images.
 
-### Training
-The training process involves optimizing the SRGAN and SRResNet model to generate high-quality images. You can customize various parameters such as batch size, learning rate, optimizer, and loss function in the configuration file.
-
-### Evaluation
-After training, you can evaluate the trained model on a separate validation dataset. The evaluation script computes metrics such as loss, PSNR (Peak Signal-to-Noise Ratio), and SSIM (Structural Similarity Index) to assess the performance of the model.
-
-## Features
-- Implementation of SRGAN architecture with both generator and discriminator networks.
-- Implementation of SRResNet architectures.
-- Supports different loss functions for content and adversarial losses.
-- Training pipeline with logging using Weights & Biases (wandb).
-- Checkpointing mechanism to save and resume training from a specific epoch.
-
-## Requirements
+### Requirements
 - Python 3.6+
 - PyTorch
 - wandb (Weights & Biases)
@@ -45,7 +35,20 @@ After training, you can evaluate the trained model on a separate validation data
 - torcheval (for Frechet Inception Distance)
 - numpy
 
-## File Structure (respectively)
+### Features
+- Implementation of SRGAN architecture with both generator and discriminator networks.
+- Implementation of SRResNet architectures.
+- Supports different loss functions for content and adversarial losses.
+- Training pipeline with logging using Weights & Biases (wandb).
+- Checkpointing mechanism to save and resume training from a specific epoch.
+
+### Training
+The training process involves optimizing the SRGAN and SRResNet model to generate high-quality images. You can customize various parameters such as batch size, learning rate, optimizer, and loss function in the configuration file.
+
+### Evaluation
+After training, you can evaluate the trained model on a separate validation dataset. The evaluation script computes metrics such as loss, PSNR (Peak Signal-to-Noise Ratio), and SSIM (Structural Similarity Index) to assess the performance of the model.
+
+### File Structure (respectively)
 - `train.py`: Main script to initiate training.
 - `models.py`: Contains the definitions of the generator and discriminator networks (i.e. Model Architectures).
 - `datasets.py`: Defines custom datasets and data loaders.
