@@ -45,6 +45,7 @@ SRGAN:
   enable_standard_bn_g: False # enable batch normalisation as in paper
   resid_scale_factor: 0.1 # residual scaling (can be different from checkpoint)
   self_attention_g: True # enable self-attention
+  optimizer_g: "adam" # discriminator optimiser
 
   # Discriminator parameters
   kernel_size_d: 3  # kernel size in all convolutional blocks
@@ -54,11 +55,12 @@ SRGAN:
   self_attention_d: True # enable self-attention
   spectral_norm_d: False # enable spectral normalisation
   dcgan_weight_init_d: False # weight initialisation as in dcgan
+  optimizer_d: "adam" # discriminator optimiser
 
   # Learning parameters
   checkpoint: None  # path to model (SRGAN) checkpoint, None if none
   batch_size: 16  # batch size
-  starting_epoch: 0  # start at this epoch
+  starting_epoch: 1  # start at this epoch
   iterations: 600000  # number of training iterations
   workers: 4  # number of workers for loading data in the DataLoader
   beta: 0.001  # the coefficient to weight the adversarial loss in the perceptual loss
@@ -67,3 +69,5 @@ SRGAN:
   content_loss_criterion: "MSE" # content loss function
   adversarial_loss_criterion: "BCE" # adversarial loss function
   VGG_params: [5, 4] # VGG parameters
+  beta: 0.001 # beta for perceptual loss
+  learning_rate: 0.0001 # learning rate

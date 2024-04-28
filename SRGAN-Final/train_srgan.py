@@ -12,50 +12,12 @@ from utils import *
 from logger import Logger
 from loss import TruncatedVGG19, BCEWithLogitsLoss_label_smoothing
 
-# Data parameters
-data_folder = "./"  # folder with JSON data files
-crop_size = 96  # crop size of target HR images
-scaling_factor = 4  # the scaling factor for the generator; the input LR images will be downsampled from the target HR images by this factor
-
-# Generator parameters
-large_kernel_size_g = 9  # kernel size of the first and last convolutions which transform the inputs and outputs
-small_kernel_size_g = 5  # kernel size of all convolutions in-between, i.e. those in the residual and subpixel convolutional blocks
-n_channels_g = 64  # number of channels in-between, i.e. the input and output channels for the residual and subpixel convolutional blocks
-n_blocks_g = 16  # number of residual blocks
-srresnet_checkpoint = "checkpoints/checkpoint_srresnet.pth.tar"  # filepath of the trained SRResNet checkpoint used for initialisation, enter 'None' for training Generator from scratch
-activation_g = "GELU"
-enable_standard_bn_g = False
-resid_scale_factor = 0.1
-self_attention_g = True
-
-# Discriminator parameters
-kernel_size_d = 3  # kernel size in all convolutional blocks
-n_channels_d = 64  # number of output channels in the first convolutional block, after which it is doubled in every 2nd block thereafter
-n_blocks_d = 8  # number of convolutional blocks
-fc_size_d = 1024  # size of the first fully connected layer
-self_attention_d = False
-spectral_norm_d = False
-dcgan_weight_init_d = False
-
-# Learning parameters
-checkpoint = None  # path to model (SRGAN) checkpoint, None if none
-batch_size = 16  # batch size
-starting_epoch = 0  # start at this epoch
-iterations = 600000  # number of training iterations
-workers = 4  # number of workers for loading data in the DataLoader
-beta = 0.001  # the coefficient to weight the adversarial loss in the perceptual loss
-learning_rate = 0.0001  # learning rate
-grad_clip = 0.1  # clip if gradients are exploding
-content_loss_criterion = "MSE"
-adversarial_loss_criterion = "BCE"
-VGG_params = (5, 4)
-
 # Default device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 torch.backends.cudnn.benchmark = True
 
-def train_epoch(train_dataloader, generator, discriminator, optimizer_g, optimizer_d, content_loss_criterion, adversarial_loss_criterion, truncated_vgg19, grad_clip = None):
+def train_epoch(train_dataloader, generator, discriminator, optimizer_g, optimizer_d, content_loss_criterion, adversarial_loss_criterion, truncated_vgg19, beta = 0.001, grad_clip = None):
     """
     Epoch trainer
 
@@ -210,7 +172,7 @@ def train_epoch(train_dataloader, generator, discriminator, optimizer_g, optimiz
 
     return total_content_loss / len(train_dataloader), total_adversarial_g_loss / len(train_dataloader), total_perceptual_loss / len(train_dataloader), total_adversarial_d_loss / len(train_dataloader), total_psnr / len(train_dataloader), total_ssim / len(train_dataloader), float(fid.compute())
 
-def train(train_dataloader, generator, discriminator, optimizer_g, optimizer_d, content_loss_criterion, adversarial_loss_criterion, iterations, logger, VGG_params = (5, 4), starting_epoch = 1, grad_clip = None, dcgan_weight_init_d = False, checkpoint = None):
+def train(train_dataloader, generator, discriminator, optimizer_g, optimizer_d, content_loss_criterion, adversarial_loss_criterion, iterations, logger, learning_rate = 0.0001, VGG_params = (5, 4), starting_epoch = 1, grad_clip = None, beta = 0.001, dcgan_weight_init_d = False, checkpoint = None):
     """
     Training
     """
@@ -258,7 +220,7 @@ def train(train_dataloader, generator, discriminator, optimizer_g, optimizer_d, 
             adjust_learning_rate(optimizer_d, 0.1)
 
         # Train and validation epoch
-        total_content_loss, total_adversarial_g_loss, total_perceptual_loss, total_adversarial_d_loss, train_psnr, train_ssim, fid = train_epoch(train_dataloader, generator = generator, discriminator = discriminator, optimizer_g = optimizer_g, optimizer_d = optimizer_d, content_loss_criterion = content_loss_criterion, adversarial_loss_criterion = adversarial_loss_criterion, truncated_vgg19 = truncated_vgg19, grad_clip = grad_clip)
+        total_content_loss, total_adversarial_g_loss, total_perceptual_loss, total_adversarial_d_loss, train_psnr, train_ssim, fid = train_epoch(train_dataloader, generator = generator, discriminator = discriminator, optimizer_g = optimizer_g, optimizer_d = optimizer_d, content_loss_criterion = content_loss_criterion, adversarial_loss_criterion = adversarial_loss_criterion, truncated_vgg19 = truncated_vgg19, beta = beta, grad_clip = grad_clip)
 
         print(f"Epoch: {epoch} / {epochs}, Content Loss {total_content_loss}, Adversarial Generator Loss {total_adversarial_g_loss}, Perceptual Loss {total_perceptual_loss}, Adversarial Discriminator Loss {total_adversarial_d_loss}, PSNR {train_psnr}, SSIM {train_ssim}, FID {fid}")
 
@@ -304,38 +266,37 @@ def main():
     np.random.seed(randomer)
 
     # Read settings from the YAML file
-    #args = parse_arguments()
-    #settings = read_settings(args.config)
+    args = parse_arguments()
+    settings = read_settings(args.config)
 
     # Access and use the settings as needed
-    #model_settings = settings.get("model", {})
-    #train_settings = settings.get("train", {})
-    #print(model_settings)
-    #print(train_settings)
+    data_settings = settings.get("Data", {})
+    logger_settings = settings.get("Logger", {})
+    srgan_settings = settings.get("SRGAN", {})
 
     # Initialise 'wandb' for logging
-    wandb_logger = Logger(f"inm705_SRGAN", project = "inm705_cwk")
+    wandb_logger = Logger(logger_settings["logger_name"], project = logger_settings["project_name"])
     logger = wandb_logger.get_logger()
 
     # Custom dataloaders
-    train_dataset = SRDataset(data_folder, split = "train", crop_size = crop_size, scaling_factor = scaling_factor, lr_img_type = "imagenet-norm", hr_img_type = "imagenet-norm")
-    train_dataloader = DataLoader(train_dataset, batch_size = batch_size, shuffle = True, num_workers = workers, pin_memory = True)  # note that we're passing the collate function here
+    train_dataset = SRDataset(data_folder = data_settings["data_folder"], split = "train", crop_size = data_settings["crop_size"], scaling_factor = data_settings["scaling_factor"], lr_img_type = "imagenet-norm", hr_img_type = "[-1, 1]")
+    train_dataloader = DataLoader(train_dataset, batch_size = srgan_settings["batch_size"], shuffle = True, num_workers = srgan_settings["workers"], pin_memory = True)  # note that we are passing the collate function here
 
-    checkpoint = None # train from scratch, without a checkpoint
-    #checkpoint = "checkpoints/checkpoint_srgan.pth.tar" # use if wanting to train from a checkpoint
+    checkpoint = None
+    starting_epoch = srgan_settings["starting_epoch"]
+    optimizer_g = srgan_settings["optimizer_g"]
+    optimizer_d = srgan_settings["optimizer_d"]
 
-    if checkpoint is None:
+    if srgan_settings["checkpoint"].lower() == "none":
         # Generator
-        generator = Generator(large_kernel_size = large_kernel_size_g, small_kernel_size = small_kernel_size_g, n_channels = n_channels_g, n_blocks = n_blocks_g, scaling_factor = scaling_factor, activation = activation_g, enable_standard_bn = enable_standard_bn_g, resid_scale_factor = resid_scale_factor, self_attention = self_attention_g)
+        generator = Generator(large_kernel_size = srgan_settings["large_kernel_size_g"], small_kernel_size = srgan_settings["small_kernel_size_g"], n_channels = srgan_settings["n_channels_g"], n_blocks = srgan_settings["n_blocks_g"], scaling_factor = data_settings["scaling_factor"], activation = srgan_settings["activation_g"], enable_standard_bn = srgan_settings["enable_standard_bn_g"], resid_scale_factor = srgan_settings["resid_scale_factor"], self_attention = srgan_settings["self_attention_g"])
         
         # Initialise generator network with pretrained SRResNet
-        if srresnet_checkpoint is not None:
-            generator.initialise_with_srresnet(srresnet_checkpoint = srresnet_checkpoint)
+        if srgan_settings["srresnet_checkpoint"].lower() == "none":
+            generator.initialise_with_srresnet(srresnet_checkpoint = srgan_settings["srresnet_checkpoint"])
 
         # Discriminator
-        discriminator = Discriminator(kernel_size = kernel_size_d, n_channels = n_channels_d, n_blocks = n_blocks_d, fc_size = fc_size_d, self_attention = self_attention_d, spectral_norm = spectral_norm_d)
-
-        train(train_dataloader, generator = generator, discriminator = discriminator, optimizer_g = "adam", optimizer_d = "adam", content_loss_criterion = content_loss_criterion, adversarial_loss_criterion = adversarial_loss_criterion, iterations = iterations, logger = logger, VGG_params = VGG_params, starting_epoch = 1, grad_clip = grad_clip, dcgan_weight_init_d = dcgan_weight_init_d, checkpoint = None)
+        discriminator = Discriminator(kernel_size = srgan_settings["kernel_size_d"], n_channels = srgan_settings["n_channels_d"], n_blocks = srgan_settings["n_blocks_d"], fc_size = srgan_settings["fc_size_d"], self_attention = srgan_settings["self_attention_d"], spectral_norm = srgan_settings["spectral_norm_d"])
 
     else:
         checkpoint = torch.load(checkpoint)
@@ -344,7 +305,8 @@ def main():
         discriminator = checkpoint["discriminator"]
         optimizer_g = checkpoint["optimizer_g"]
         optimizer_d = checkpoint["optimizer_d"]
-        train(train_dataloader, generator = generator, discriminator = discriminator, optimizer_g = optimizer_g, optimizer_d = optimizer_d, content_loss_criterion = content_loss_criterion, adversarial_loss_criterion = adversarial_loss_criterion, iterations = iterations, logger = logger, VGG_params = VGG_params, starting_epoch = starting_epoch, grad_clip = grad_clip, dcgan_weight_init_d = dcgan_weight_init_d, checkpoint = checkpoint)
+
+    train(train_dataloader, generator = generator, discriminator = discriminator, optimizer_g = optimizer_g, optimizer_d = optimizer_d, content_loss_criterion = srgan_settings["content_loss_criterion"], adversarial_loss_criterion = srgan_settings["adversarial_loss_criterion"], iterations = srgan_settings["iterations"], logger = logger, VGG_params = srgan_settings["VGG_params"], starting_epoch = starting_epoch, grad_clip = srgan_settings["grad_clip"], beta = srgan_settings["beta"], dcgan_weight_init_d = srgan_settings["dcgan_weight_init_d"], checkpoint = None)
 
 if __name__ == "__main__":
     main()
