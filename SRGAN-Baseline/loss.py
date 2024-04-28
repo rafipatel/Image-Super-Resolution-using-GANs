@@ -20,7 +20,7 @@ class TruncatedVGG19(nn.Module):
         super(TruncatedVGG19, self).__init__()
 
         # Load the pre-trained VGG19 available in torchvision
-        vgg19 = torchvision.models.vgg19(pretrained=True)
+        vgg19 = torchvision.models.vgg19(weights = "DEFAULT")
 
         maxpool_counter = 0
         conv_counter = 0
@@ -56,3 +56,24 @@ class TruncatedVGG19(nn.Module):
         output = self.truncated_vgg19(input)  # (N, feature_map_channels, feature_map_w, feature_map_h)
 
         return output
+    
+class BCEWithLogitsLoss_label_smoothing(nn.Module):
+    """
+    From 'apple2373' in https://github.com/pytorch/pytorch/issues/91545
+    """
+    def __init__(self, label_smoothing = 0.1, reduction = "mean"):
+        super(BCEWithLogitsLoss_label_smoothing, self).__init__()
+        assert 0 <= label_smoothing < 1, "label_smoothing value must be between 0 and 1."
+        self.label_smoothing = label_smoothing
+        self.reduction = reduction
+        self.bce_with_logits = nn.BCEWithLogitsLoss(reduction = reduction)
+
+    def forward(self, input, target):
+        if self.label_smoothing > 0:
+            positive_smoothed_labels = 1.0 - self.label_smoothing
+            negative_smoothed_labels = self.label_smoothing
+            target = target * positive_smoothed_labels + \
+                (1 - target) * negative_smoothed_labels
+
+        loss = self.bce_with_logits(input, target)
+        return loss

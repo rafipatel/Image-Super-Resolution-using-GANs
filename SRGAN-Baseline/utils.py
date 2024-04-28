@@ -7,6 +7,7 @@ import torch
 import yaml
 import argparse
 import numpy as np
+import torch.nn as nn
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -218,3 +219,14 @@ def adjust_learning_rate(optimizer, shrink_factor):
     for param_group in optimizer.param_groups:
         param_group["lr"] = param_group["lr"] * shrink_factor
     print("The new learning rate is %f\n" % (optimizer.param_groups[0]["lr"]))
+
+def weights_init(m):
+    if isinstance(m, nn.Conv2d):
+        m.weight.data.normal_(0.0, 0.02)
+    elif isinstance(m, nn.BatchNorm2d):
+        m.weight.data.normal_(1.0, 0.02)
+        m.bias.data.fill_(0)
+    elif isinstance(m, nn.Linear):
+        nn.init.normal_(m.weight.data, 0.0, 0.02)
+        if m.bias is not None:
+            nn.init.constant_(m.bias.data, 0)

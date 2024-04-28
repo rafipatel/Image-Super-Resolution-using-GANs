@@ -4,49 +4,20 @@ from torch.utils.data import DataLoader
 from torchvision.utils import make_grid
 import numpy as np
 import piq
+from torcheval.metrics import FrechetInceptionDistance
 
 from models import Generator, Discriminator
 from datasets import SRDataset
 from utils import *
 from logger import Logger
-from loss import TruncatedVGG19
-
-# Data parameters
-data_folder = "./"  # folder with JSON data files
-crop_size = 96  # crop size of target HR images
-scaling_factor = 4  # the scaling factor for the generator; the input LR images will be downsampled from the target HR images by this factor
-
-# Generator parameters
-large_kernel_size_g = 9  # kernel size of the first and last convolutions which transform the inputs and outputs
-small_kernel_size_g = 3  # kernel size of all convolutions in-between, i.e. those in the residual and subpixel convolutional blocks
-n_channels_g = 64  # number of channels in-between, i.e. the input and output channels for the residual and subpixel convolutional blocks
-n_blocks_g = 16  # number of residual blocks
-srresnet_checkpoint = "checkpoints/checkpoint_srresnet.pth.tar"  # filepath of the trained SRResNet checkpoint used for initialization
-
-# Discriminator parameters
-kernel_size_d = 3  # kernel size in all convolutional blocks
-n_channels_d = 64  # number of output channels in the first convolutional block, after which it is doubled in every 2nd block thereafter
-n_blocks_d = 8  # number of convolutional blocks
-fc_size_d = 1024  # size of the first fully connected layer
-
-# Learning parameters
-checkpoint = None  # path to model (SRGAN) checkpoint, None if none
-batch_size = 16  # batch size
-starting_epoch = 0  # start at this epoch
-iterations = 2000000  # number of training iterations
-workers = 4  # number of workers for loading data in the DataLoader
-vgg19_i = 5  # the index i in the definition for VGG loss; see paper or models.py
-vgg19_j = 4  # the index j in the definition for VGG loss; see paper or models.py
-beta = 0.001  # the coefficient to weight the adversarial loss in the perceptual loss
-learning_rate = 0.0001  # learning rate
-grad_clip = 0.1  # clip if gradients are exploding
+from loss import TruncatedVGG19, BCEWithLogitsLoss_label_smoothing
 
 # Default device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 torch.backends.cudnn.benchmark = True
 
-def train_epoch(train_dataloader, generator, discriminator, optimizer_g, optimizer_d, content_loss_criterion, adversarial_loss_criterion, truncated_vgg19, grad_clip = None):
+def train_epoch(train_dataloader, generator, discriminator, optimizer_g, optimizer_d, content_loss_criterion, adversarial_loss_criterion, truncated_vgg19, beta = 0.001, grad_clip = None):
     """
     Epoch trainer
 
@@ -77,17 +48,22 @@ def train_epoch(train_dataloader, generator, discriminator, optimizer_g, optimiz
     # BCE Loss
     if adversarial_loss_criterion == "BCE":
         adversarial_loss_function = nn.BCEWithLogitsLoss()
+    # BCE with label smoothing Loss
+    if adversarial_loss_criterion == "BCE_label_smoothing":
+        adversarial_loss_function = BCEWithLogitsLoss_label_smoothing(label_smoothing = 0.1)
     # MSE Loss
     if adversarial_loss_criterion == "MSE":
         adversarial_loss_function = nn.MSELoss()
 
-    # Keep track of Losses/PSNR/SSIM
+    # Keep track of Losses/PSNR/SSIM/FID
     total_content_loss = 0
     total_adversarial_g_loss = 0
     total_perceptual_loss = 0
     total_adversarial_d_loss = 0
     total_psnr = 0
     total_ssim = 0
+    
+    fid = FrechetInceptionDistance().to(device)
 
     # Batches
     for i, (lr_imgs, hr_imgs) in enumerate(train_dataloader):
@@ -111,18 +87,15 @@ def train_epoch(train_dataloader, generator, discriminator, optimizer_g, optimiz
         # Calculate the perceptual loss using the content and adversarial losses
         content_loss = content_loss_criterion(sr_imgs_in_vgg_space, hr_imgs_in_vgg_space)
 
-        # Binary Cross-Entropy loss
-        if adversarial_loss_criterion == "BCE":
-            adversarial_loss = adversarial_loss_function(sr_discriminated, torch.ones_like(sr_discriminated))
-        # MSE loss
-        if adversarial_loss_criterion == "MSE":
-            adversarial_loss = adversarial_loss_function(sr_discriminated, torch.ones_like(sr_discriminated))
         # Wasserstein loss
-        elif adversarial_loss_criterion == "wasserstein":
+        if adversarial_loss_criterion == "wasserstein":
             adversarial_loss = -1 * sr_discriminated.mean()
         # Hinge loss
         elif adversarial_loss_criterion == "hinge":
             adversarial_loss = -1 * sr_discriminated.mean()
+        # Other losses
+        else:
+            adversarial_loss = adversarial_loss_function(sr_discriminated, torch.ones_like(sr_discriminated))
 
         perceptual_loss = content_loss + beta * adversarial_loss
 
@@ -131,7 +104,7 @@ def train_epoch(train_dataloader, generator, discriminator, optimizer_g, optimiz
         perceptual_loss.backward()
 
         # Clip gradients, if necessary
-        if grad_clip is not None:
+        if (isinstance(grad_clip, int) == True) or (isinstance(grad_clip, float) == True):
             clip_gradient(optimizer_g, grad_clip)
 
         # Update generator
@@ -167,25 +140,22 @@ def train_epoch(train_dataloader, generator, discriminator, optimizer_g, optimiz
         hr_discriminated = discriminator(hr_imgs)
         sr_discriminated = discriminator(sr_imgs.detach())
 
-        # Binary Cross-Entropy loss
-        if adversarial_loss_criterion == "BCE":
-            adversarial_loss = adversarial_loss_function(sr_discriminated, torch.zeros_like(sr_discriminated)) + adversarial_loss_function(hr_discriminated, torch.ones_like(hr_discriminated))
-        # MSE loss
-        if adversarial_loss_criterion == "MSE":
-            adversarial_loss = adversarial_loss_function(sr_discriminated, torch.zeros_like(sr_discriminated)) + adversarial_loss_function(hr_discriminated, torch.ones_like(hr_discriminated))
         # Wasserstein loss
-        elif adversarial_loss_criterion == "wasserstein":
+        if adversarial_loss_criterion == "wasserstein":
             adversarial_loss = sr_discriminated.mean() - hr_discriminated.mean()
         # Hinge loss
         elif adversarial_loss_criterion == "hinge":
             adversarial_loss = nn.ReLU()(1 - hr_discriminated).mean() + nn.ReLU()(1 + sr_discriminated).mean()
+        # Other losses
+        else:
+            adversarial_loss = adversarial_loss_function(sr_discriminated, torch.zeros_like(sr_discriminated)) + adversarial_loss_function(hr_discriminated, torch.ones_like(hr_discriminated))
 
         # Back propagation
         optimizer_d.zero_grad()
         adversarial_loss.backward()
 
         # Clip gradients, if necessary
-        if grad_clip is not None:
+        if (isinstance(grad_clip, int) == True) or (isinstance(grad_clip, float) == True):
             clip_gradient(optimizer_d, grad_clip)
 
         # Update discriminator
@@ -194,11 +164,15 @@ def train_epoch(train_dataloader, generator, discriminator, optimizer_g, optimiz
         # Keep track of loss
         total_adversarial_d_loss += float(adversarial_loss.item())
 
+        # FID update
+        fid.update(convert_image(hr_imgs, source = "imagenet-norm", target = "[0, 1]"), is_real = True)
+        fid.update(convert_image(sr_imgs, source = "imagenet-norm", target = "[0, 1]"), is_real = False)
+
         del lr_imgs, hr_imgs, sr_imgs, sr_imgs_y, hr_imgs_y, hr_imgs_in_vgg_space, sr_imgs_in_vgg_space, hr_discriminated, sr_discriminated
 
-    return total_content_loss / len(train_dataloader), total_adversarial_g_loss / len(train_dataloader), total_perceptual_loss / len(train_dataloader), total_adversarial_d_loss / len(train_dataloader), total_psnr / len(train_dataloader), total_ssim / len(train_dataloader)
+    return total_content_loss / len(train_dataloader), total_adversarial_g_loss / len(train_dataloader), total_perceptual_loss / len(train_dataloader), total_adversarial_d_loss / len(train_dataloader), total_psnr / len(train_dataloader), total_ssim / len(train_dataloader), float(fid.compute())
 
-def train(train_dataloader, generator, discriminator, optimizer_g, optimizer_d, content_loss_criterion, adversarial_loss_criterion, iterations, logger, VGG_params = (5, 4), starting_epoch = 1, grad_clip = None, checkpoint = None):
+def train(train_dataloader, generator, discriminator, optimizer_g, optimizer_d, content_loss_criterion, adversarial_loss_criterion, iterations, logger, learning_rate = 0.0001, VGG_params = (5, 4), starting_epoch = 1, grad_clip = None, beta = 0.001, dcgan_weight_init_d = False, checkpoint = None):
     """
     Training
     """
@@ -231,6 +205,10 @@ def train(train_dataloader, generator, discriminator, optimizer_g, optimizer_d, 
     truncated_vgg19 = TruncatedVGG19(i = VGG_params[0], j = VGG_params[1])
     truncated_vgg19.eval()
 
+    # Weight initialise with N(0, 0.02) - discriminator only
+    if dcgan_weight_init_d == True:
+        discriminator.apply(weights_init)
+
     # Total number of epochs to train for (based on iterations)
     epochs = int(iterations // len(train_dataloader))
 
@@ -242,9 +220,9 @@ def train(train_dataloader, generator, discriminator, optimizer_g, optimizer_d, 
             adjust_learning_rate(optimizer_d, 0.1)
 
         # Train and validation epoch
-        total_content_loss, total_adversarial_g_loss, total_perceptual_loss, total_adversarial_d_loss, train_psnr, train_ssim = train_epoch(train_dataloader, generator = generator, discriminator = discriminator, optimizer_g = optimizer_g, optimizer_d = optimizer_d, content_loss_criterion = content_loss_criterion, adversarial_loss_criterion = adversarial_loss_criterion, truncated_vgg19 = truncated_vgg19, grad_clip = grad_clip)
+        total_content_loss, total_adversarial_g_loss, total_perceptual_loss, total_adversarial_d_loss, train_psnr, train_ssim, fid = train_epoch(train_dataloader, generator = generator, discriminator = discriminator, optimizer_g = optimizer_g, optimizer_d = optimizer_d, content_loss_criterion = content_loss_criterion, adversarial_loss_criterion = adversarial_loss_criterion, truncated_vgg19 = truncated_vgg19, beta = beta, grad_clip = grad_clip)
 
-        print(f"Epoch: {epoch} / {epochs}, Content Loss {total_content_loss}, Adversarial Generator Loss {total_adversarial_g_loss}, Perceptual Loss {total_perceptual_loss}, Adversarial Discriminator Loss {total_adversarial_d_loss}, PSNR {train_psnr}, SSIM {train_ssim}")
+        print(f"Epoch: {epoch} / {epochs}, Content Loss {total_content_loss}, Adversarial Generator Loss {total_adversarial_g_loss}, Perceptual Loss {total_perceptual_loss}, Adversarial Discriminator Loss {total_adversarial_d_loss}, PSNR {train_psnr}, SSIM {train_ssim}, FID {fid}")
 
         logger.log({"total_content_loss": total_content_loss})
         logger.log({"total_adversarial_g_loss": total_adversarial_g_loss})
@@ -252,6 +230,7 @@ def train(train_dataloader, generator, discriminator, optimizer_g, optimizer_d, 
         logger.log({"total_adversarial_d_loss": total_adversarial_d_loss})
         logger.log({"train_psnr": train_psnr})
         logger.log({"train_ssim": train_ssim})
+        logger.log({"FID": fid})
 
         # Create checkpoint folder
         if not os.path.exists("checkpoints"):
@@ -272,7 +251,8 @@ def train(train_dataloader, generator, discriminator, optimizer_g, optimizer_d, 
                     "total_perceptual_loss": total_perceptual_loss,
                     "total_adversarial_d_loss": total_adversarial_d_loss,
                     "train_psnr": train_psnr,
-                    "train_ssim": train_ssim},
+                    "train_ssim": train_ssim,
+                    "FID": fid},
                     checkpoint_path)
         
     return
@@ -286,37 +266,37 @@ def main():
     np.random.seed(randomer)
 
     # Read settings from the YAML file
-    #args = parse_arguments()
-    #settings = read_settings(args.config)
+    args = parse_arguments()
+    settings = read_settings(args.config)
 
     # Access and use the settings as needed
-    #model_settings = settings.get("model", {})
-    #train_settings = settings.get("train", {})
-    #print(model_settings)
-    #print(train_settings)
+    data_settings = settings.get("Data", {})
+    logger_settings = settings.get("Logger", {})
+    srgan_settings = settings.get("SRGAN", {})
 
     # Initialise 'wandb' for logging
-    wandb_logger = Logger(f"inm705_SRGAN_Adam-x2_MSE", project = "inm705_cwk")
+    wandb_logger = Logger(logger_settings["logger_name"], project = logger_settings["project_name"])
     logger = wandb_logger.get_logger()
 
     # Custom dataloaders
-    train_dataset = SRDataset(data_folder, split = "train", crop_size = crop_size, scaling_factor = scaling_factor, lr_img_type = "imagenet-norm", hr_img_type = "imagenet-norm")
-    train_dataloader = DataLoader(train_dataset, batch_size = batch_size, shuffle = True, num_workers = workers, pin_memory = True)  # note that we're passing the collate function here
+    train_dataset = SRDataset(data_folder = data_settings["data_folder"], split = "train", crop_size = data_settings["crop_size"], scaling_factor = data_settings["scaling_factor"], lr_img_type = "imagenet-norm", hr_img_type = "[-1, 1]")
+    train_dataloader = DataLoader(train_dataset, batch_size = srgan_settings["batch_size"], shuffle = True, num_workers = srgan_settings["workers"], pin_memory = True)  # note that we are passing the collate function here
 
-    checkpoint = None # train from scratch, without a checkpoint
-    #checkpoint = "checkpoints/checkpoint_srgan.pth.tar" # use if wanting to train from a checkpoint
+    checkpoint = None
+    starting_epoch = srgan_settings["starting_epoch"]
+    optimizer_g = srgan_settings["optimizer_g"]
+    optimizer_d = srgan_settings["optimizer_d"]
 
-    if checkpoint is None:
+    if srgan_settings["checkpoint"].lower() == "none":
         # Generator
-        generator = Generator(large_kernel_size = large_kernel_size_g, small_kernel_size = small_kernel_size_g, n_channels = n_channels_g, n_blocks = n_blocks_g, scaling_factor = scaling_factor)
-
+        generator = Generator(large_kernel_size = srgan_settings["large_kernel_size_g"], small_kernel_size = srgan_settings["small_kernel_size_g"], n_channels = srgan_settings["n_channels_g"], n_blocks = srgan_settings["n_blocks_g"], scaling_factor = data_settings["scaling_factor"], activation = srgan_settings["activation_g"], enable_standard_bn = srgan_settings["enable_standard_bn_g"], resid_scale_factor = srgan_settings["resid_scale_factor"], self_attention = srgan_settings["self_attention_g"])
+        
         # Initialise generator network with pretrained SRResNet
-        generator.initialise_with_srresnet(srresnet_checkpoint = srresnet_checkpoint)
+        if srgan_settings["srresnet_checkpoint"].lower() == "none":
+            generator.initialise_with_srresnet(srresnet_checkpoint = srgan_settings["srresnet_checkpoint"])
 
         # Discriminator
-        discriminator = Discriminator(kernel_size = kernel_size_d, n_channels = n_channels_d, n_blocks = n_blocks_d, fc_size = fc_size_d)
-
-        train(train_dataloader, generator = generator, discriminator = discriminator, optimizer_g = "adam", optimizer_d = "adam", content_loss_criterion = "MSE", adversarial_loss_criterion = "MSE", iterations = iterations, logger = logger, VGG_params = (5, 4), starting_epoch = 1, grad_clip = grad_clip, checkpoint = None)
+        discriminator = Discriminator(kernel_size = srgan_settings["kernel_size_d"], n_channels = srgan_settings["n_channels_d"], n_blocks = srgan_settings["n_blocks_d"], fc_size = srgan_settings["fc_size_d"], self_attention = srgan_settings["self_attention_d"], spectral_norm = srgan_settings["spectral_norm_d"])
 
     else:
         checkpoint = torch.load(checkpoint)
@@ -325,7 +305,8 @@ def main():
         discriminator = checkpoint["discriminator"]
         optimizer_g = checkpoint["optimizer_g"]
         optimizer_d = checkpoint["optimizer_d"]
-        train(train_dataloader, generator = generator, discriminator = discriminator, optimizer_g = optimizer_g, optimizer_d = optimizer_d, content_loss_criterion = "MSE", adversarial_loss_criterion = "MSE", iterations = iterations, logger = logger, VGG_params = (5, 4), starting_epoch = starting_epoch, grad_clip = grad_clip, checkpoint = checkpoint)
+
+    train(train_dataloader, generator = generator, discriminator = discriminator, optimizer_g = optimizer_g, optimizer_d = optimizer_d, content_loss_criterion = srgan_settings["content_loss_criterion"], adversarial_loss_criterion = srgan_settings["adversarial_loss_criterion"], iterations = srgan_settings["iterations"], logger = logger, VGG_params = srgan_settings["VGG_params"], starting_epoch = starting_epoch, grad_clip = srgan_settings["grad_clip"], beta = srgan_settings["beta"], dcgan_weight_init_d = srgan_settings["dcgan_weight_init_d"], checkpoint = None)
 
 if __name__ == "__main__":
     main()

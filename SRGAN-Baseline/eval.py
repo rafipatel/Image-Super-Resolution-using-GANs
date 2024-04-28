@@ -3,26 +3,46 @@ from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 from datasets import SRDataset
 import torch
 import numpy as np
+from models import SRResNet, Generator
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Data
 data_folder = "./"
-test_data_names = ["Set5", "Set14", "BSDS100"]
+test_data_names = ["Set5", "Set14", "BSDS100", "DIV2K_valid_HR"]
 
 # Model checkpoints
 srgan_checkpoint = "checkpoint_srgan.pth.tar"
 srresnet_checkpoint = "checkpoint_srresnet.pth.tar"
 
+#### Note ####
+# Many updates were made to the model classes and their functionality, gradually adding the use of different optimisers, self-attention, etc.
+# Since we saved the whole model without exporting it as dictionaries, we need to call the respective model class (SRResNet/Generator) with its relevant parameters
+# The parameters are then updated for the model as seen below
+# Some of our models will allow you to skip the steps uncommented below, here is how you can do so - this only works for the most up to date models we ran, which are those with attention
 # Load SRResNet
-srresnet = torch.load(srresnet_checkpoint)['model'].to(device)
-srresnet.eval()
-model = srresnet
-
+#srresnet = torch.load(srresnet_checkpoint)["model"].to(device)
+#srresnet.eval()
+#model = srresnet
 # Load SRGAN
-#srgan_generator = torch.load(srgan_checkpoint)['generator'].to(device)
+#srgan_generator = torch.load(srgan_checkpoint)["generator"].to(device)
 #srgan_generator.eval()
 #model = srgan_generator
+########################################################################################################################
+
+# Load SRResNet
+net = SRResNet(large_kernel_size = 9, small_kernel_size = 5, n_channels = 64, n_blocks = 20, scaling_factor = 4, self_attention = False)
+srresnet = torch.load(srresnet_checkpoint)["model"].to(device)
+net.load_state_dict(srresnet.state_dict())
+model = net.to(device)
+model.eval()
+
+# Load SRGAN (uncomment and comment SRResNet lines to use this)
+#net = Generator(large_kernel_size = 9, small_kernel_size = 3, n_channels = 64, n_blocks = 16, scaling_factor = 4, self_attention = False)
+#srgan_generator = torch.load(srgan_checkpoint)["generator"].to(device)
+#net.load_state_dict(srgan_generator.state_dict())
+#model = net.to(device)
+#model.eval()
 
 # Evaluate
 def evaluation():

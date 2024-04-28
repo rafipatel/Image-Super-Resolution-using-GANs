@@ -12,26 +12,6 @@ from utils import *
 from logger import Logger
 from loss import TruncatedVGG19
 
-# Data parameters
-data_folder = "./"  # folder with JSON data files
-crop_size = 96  # crop size of target HR images
-scaling_factor = 4  # the scaling factor; the input LR images will be downsampled from the target HR images by this factor
-
-# Model parameters
-large_kernel_size = 9  # kernel size of the first and last convolutions which transform the inputs and outputs
-small_kernel_size = 3  # kernel size of all convolutions in-between, i.e. those in the residual and subpixel convolutional blocks
-n_channels = 64  # number of channels in-between, i.e. the input and output channels for the residual and subpixel convolutional blocks
-n_blocks = 16  # number of residual blocks
-
-# Learning parameters
-checkpoint = None  # path to model checkpoint, None if none
-batch_size = 16  # batch size
-start_epoch = 0  # start at this epoch
-iterations = 1000000  # number of training iterations
-workers = 4  # number of workers for loading data in the DataLoader
-learning_rate = 0.0001  # learning rate
-grad_clip = None  # clip if gradients are exploding
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 torch.backends.cudnn.benchmark = True
@@ -109,7 +89,7 @@ def train_epoch(train_dataloader, model, criterion, optimizer, truncated_vgg19 =
         loss.backward()
 
         # Clip gradients, if necessary
-        if grad_clip is not None:
+        if (isinstance(grad_clip, int) == True) or (isinstance(grad_clip, float) == True):
             clip_gradient(optimizer, grad_clip)
 
         # Update model
@@ -224,7 +204,7 @@ def validate_epoch(val_dataloader, model, criterion, truncated_vgg19 = None, wit
 
     return total_loss / len(val_dataloader), total_psnr / len(val_dataloader), total_ssim / len(val_dataloader)
 
-def train(train_dataloader, val_dataloader, model, iterations, logger, with_VGG = False, VGG_params = (5, 4), criterion = "MSE", starting_epoch = 1, optimizer = "adam", grad_clip = None, checkpoint = None):
+def train(train_dataloader, val_dataloader, model, iterations, logger, with_VGG = False, VGG_params = (5, 4), criterion = "MSE", starting_epoch = 1, optimizer = "adam", learning_rate = 0.0001, adaptive_lr = False, grad_clip = None, dcgan_weight_init = False, checkpoint = None):
     """
     Training
     """
@@ -245,8 +225,12 @@ def train(train_dataloader, val_dataloader, model, iterations, logger, with_VGG 
     model = model.to(device)
 
     # Apply VGG (if desired)
-    truncated_vgg19 = TruncatedVGG19(i = VGG_params[0], j = VGG_params[1])
+    truncated_vgg19 = TruncatedVGG19(i = int(VGG_params[0]), j = int(VGG_params[1]))
     truncated_vgg19.eval()
+
+    # Weight initialise with N(0, 0.02)
+    if dcgan_weight_init == True:
+        model.apply(weights_init)
 
     # Total number of epochs to train for (based on iterations)
     epochs = int(iterations // len(train_dataloader))
@@ -254,7 +238,7 @@ def train(train_dataloader, val_dataloader, model, iterations, logger, with_VGG 
     # Epochs
     for epoch in range(starting_epoch, epochs + 1):
         # At the halfway point, reduce learning rate by a tenth
-        if epoch == int(epochs // 2):
+        if (epoch == int(epochs // 2)) and (adaptive_lr == True):
             adjust_learning_rate(optimizer, 0.1)
 
         # Train and validation epoch
@@ -336,39 +320,38 @@ def main():
     np.random.seed(randomer)
 
     # Read settings from the YAML file
-    #args = parse_arguments()
-    #settings = read_settings(args.config)
+    args = parse_arguments()
+    settings = read_settings(args.config)
 
     # Access and use the settings as needed
-    #model_settings = settings.get("model", {})
-    #train_settings = settings.get("train", {})
-    #print(model_settings)
-    #print(train_settings)
+    data_settings = settings.get("Data", {})
+    logger_settings = settings.get("Logger", {})
+    srresnet_settings = settings.get("SRResNet", {})
 
     # Initialise 'wandb' for logging
-    wandb_logger = Logger(f"inm705_SRResNet_Adam_MSE", project = "inm705_cwk")
+    wandb_logger = Logger(logger_settings["logger_name"], project = logger_settings["project_name"])
     logger = wandb_logger.get_logger()
 
     # Custom dataloaders
-    train_dataset = SRDataset(data_folder, split = "train", crop_size = crop_size, scaling_factor = scaling_factor, lr_img_type = "imagenet-norm", hr_img_type = "[-1, 1]")
-    train_dataloader = DataLoader(train_dataset, batch_size = batch_size, shuffle = True, num_workers = workers, pin_memory = True)  # note that we're passing the collate function here
+    train_dataset = SRDataset(data_folder = data_settings["data_folder"], split = "train", crop_size = data_settings["crop_size"], scaling_factor = data_settings["scaling_factor"], lr_img_type = "imagenet-norm", hr_img_type = "[-1, 1]")
+    train_dataloader = DataLoader(train_dataset, batch_size = srresnet_settings["batch_size"], shuffle = True, num_workers = srresnet_settings["workers"], pin_memory = True)  # note that we are passing the collate function here
 
-    val_dataset = SRDataset(data_folder, split = "val", crop_size = 0, scaling_factor = scaling_factor, lr_img_type = "imagenet-norm", hr_img_type = "[-1, 1]")
-    val_dataloader = DataLoader(val_dataset, batch_size = 1, shuffle = True, num_workers = workers, pin_memory = True)  # note that we're passing the collate function here
+    val_dataset = SRDataset(data_folder = data_settings["data_folder"], split = "val", crop_size = 0, scaling_factor = data_settings["scaling_factor"], lr_img_type = "imagenet-norm", hr_img_type = "[-1, 1]")
+    val_dataloader = DataLoader(val_dataset, batch_size = 1, shuffle = True, num_workers = srresnet_settings["workers"], pin_memory = True)  # note that we are passing the collate function here
 
-    checkpoint = None # train from scratch, without a checkpoint
-    #checkpoint = "checkpoints/checkpoint_srresnet.pth.tar" # use if wanting to train from a checkpoint
+    checkpoint = None
+    starting_epoch = srresnet_settings["starting_epoch"]
+    optimizer = srresnet_settings["optimizer"]
 
-    if checkpoint is None:
-        model = SRResNet(large_kernel_size = large_kernel_size, small_kernel_size = small_kernel_size, n_channels = n_channels, n_blocks = n_blocks, scaling_factor = scaling_factor)
-        train(train_dataloader, val_dataloader, model, iterations, logger, with_VGG = False, VGG_params = (5, 4), criterion = "MSE", starting_epoch = 1, optimizer = "adam", grad_clip = grad_clip, checkpoint = None)
-
+    if srresnet_settings["checkpoint"].lower() == "none":
+        model = SRResNet(large_kernel_size = srresnet_settings["large_kernel_size"], small_kernel_size = srresnet_settings["small_kernel_size"], n_channels = srresnet_settings["n_channels"], n_blocks = srresnet_settings["n_blocks"], scaling_factor = data_settings["scaling_factor"], activation = srresnet_settings["activation"], enable_standard_bn = srresnet_settings["enable_standard_bn"], resid_scale_factor = srresnet_settings["resid_scale_factor"], self_attention = srresnet_settings["self_attention"])
     else:
-        checkpoint = torch.load(checkpoint)
+        checkpoint = torch.load(srresnet_settings["checkpoint"])
         starting_epoch = checkpoint["epoch"] + 1
         model = checkpoint["model"]
         optimizer = checkpoint["optimizer"]
-        train(train_dataloader, val_dataloader, model, iterations, logger, VGG_params = (5, 4), criterion = "MSE", starting_epoch = starting_epoch, optimizer = optimizer, grad_clip = grad_clip, checkpoint = checkpoint)
+
+    train(train_dataloader, val_dataloader, model, srresnet_settings["iterations"], logger, with_VGG = srresnet_settings["with_VGG"], VGG_params = srresnet_settings["VGG_params"], criterion = srresnet_settings["criterion"], starting_epoch = starting_epoch, optimizer = optimizer, learning_rate = srresnet_settings["learning_rate"], adaptive_lr = srresnet_settings["adaptive_lr"], grad_clip = srresnet_settings["grad_clip"], dcgan_weight_init = srresnet_settings["dcgan_weight_init"], checkpoint = checkpoint)
 
 if __name__ == "__main__":
     main()
