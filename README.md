@@ -13,7 +13,7 @@ This repository contains a PyTorch implementation of the Super-Resolution Genera
 5. [Evaluation](#evaluation)
 6. [ File Structure](#FileStructure)
 7. [Usage](#usage)
-8. [Acknowledgements](#acknowledgements)
+8. [Acknowledgements](#Acknowledgements)
 9. [License](#License)
 
 ### Introduction
