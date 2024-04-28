@@ -149,7 +149,7 @@ class ResidualBlock(nn.Module):
         output = self.conv_block1(input)  # (N, n_channels, w, h)
         output = self.conv_block2(output)  # (N, n_channels, w, h)
 
-        if self.resid_scale_factor is not None:
+        if (isinstance(self.resid_scale_factor, int) == True) or (isinstance(self.resid_scale_factor, float) == True):
             output = output.mul(self.resid_scale_factor)
 
         output = output + residual  # (N, n_channels, w, h)
@@ -215,7 +215,7 @@ class SRResNet(nn.Module):
         output = self.residual_blocks(output)  # (N, n_channels, w, h)
         output = self.conv_block2(output)  # (N, n_channels, w, h)
 
-        if self.resid_scale_factor is not None:
+        if (isinstance(self.resid_scale_factor, int) == True) or (isinstance(self.resid_scale_factor, float) == True):
             output = output.mul(self.resid_scale_factor)
 
         output = output + residual  # (N, n_channels, w, h)

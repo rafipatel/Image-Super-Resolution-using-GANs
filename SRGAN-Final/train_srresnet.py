@@ -89,7 +89,7 @@ def train_epoch(train_dataloader, model, criterion, optimizer, truncated_vgg19 =
         loss.backward()
 
         # Clip gradients, if necessary
-        if grad_clip is not None:
+        if (isinstance(grad_clip, int) == True) or (isinstance(grad_clip, float) == True):
             clip_gradient(optimizer, grad_clip)
 
         # Update model

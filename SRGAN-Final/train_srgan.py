@@ -104,7 +104,7 @@ def train_epoch(train_dataloader, generator, discriminator, optimizer_g, optimiz
         perceptual_loss.backward()
 
         # Clip gradients, if necessary
-        if grad_clip is not None:
+        if (isinstance(grad_clip, int) == True) or (isinstance(grad_clip, float) == True):
             clip_gradient(optimizer_g, grad_clip)
 
         # Update generator
@@ -155,7 +155,7 @@ def train_epoch(train_dataloader, generator, discriminator, optimizer_g, optimiz
         adversarial_loss.backward()
 
         # Clip gradients, if necessary
-        if grad_clip is not None:
+        if (isinstance(grad_clip, int) == True) or (isinstance(grad_clip, float) == True):
             clip_gradient(optimizer_d, grad_clip)
 
         # Update discriminator
