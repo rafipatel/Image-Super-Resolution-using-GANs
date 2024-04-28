@@ -31,7 +31,7 @@ After training, you can evaluate the trained model on a separate validation data
 
 ## Features
 - Implementation of SRGAN architecture with both generator and discriminator networks.
-- Implementation of SRResNet architecture with both generator and discriminator networks.
+- Implementation of SRResNet architectures.
 - Supports different loss functions for content and adversarial losses.
 - Training pipeline with logging using Weights & Biases (wandb).
 - Checkpointing mechanism to save and resume training from a specific epoch.
@@ -45,9 +45,9 @@ After training, you can evaluate the trained model on a separate validation data
 - torcheval (for Frechet Inception Distance)
 - numpy
 
-## File Structure
+## File Structure (respectively)
 - `train.py`: Main script to initiate training.
-- `models.py`: Contains the definitions of the generator and discriminator networks (i.e. Model Architecture).
+- `models.py`: Contains the definitions of the generator and discriminator networks (i.e. Model Architectures).
 - `datasets.py`: Defines custom datasets and data loaders.
 - `utils.py`: Utility functions for image conversion, etc.
 - `logger.py`: Logger class for logging training metrics to wandb.
