@@ -1,0 +1,69 @@
+Data:
+  # Data parameters
+  data_folder: "./"  # folder with JSON data files
+  crop_size: 96  # crop size of target HR images
+  scaling_factor: 4  # the scaling factor for the generator; the input LR images will be downsampled from the target HR images by this factor
+
+Logger:
+  logger_name: "inm705_final_architecture"
+  project_name: "inm705_cwk"
+
+SRResNet:
+  # Model parameters
+  large_kernel_size: 9  # kernel size of the first and last convolutions which transform the inputs and outputs
+  small_kernel_size: 5  # kernel size of all convolutions in-between, i.e. those in the residual and subpixel convolutional blocks
+  n_channels: 64  # number of channels in-between, i.e. the input and output channels for the residual and subpixel convolutional blocks
+  n_blocks: 20  # number of residual blocks
+  activation: "GELU" # activation function
+  enable_standard_bn: False # enable batch normalisation as in paper
+  resid_scale_factor: 0.1 # residual scaling
+  self_attention: True # enable self-attention
+  dcgan_weight_init: False # weight initialisation as in dcgan
+
+  # Learning parameters
+  checkpoint: "none"  # path to model checkpoint, "none" if no checkpoint
+  batch_size: 16  # batch size
+  starting_epoch: 1  # start at this epoch
+  iterations: 1000000  # number of training iterations
+  workers: 4  # number of workers for loading data in the DataLoader
+  learning_rate: 0.0001  # learning rate
+  grad_clip: 0.1  # clip if gradients are exploding
+  adaptive_lr: True # adaptive learning rate
+  optimizer: "adam" # optimiser
+  criterion: "MAE" # loss function
+  with_VGG: False # enable VGG
+  VGG_params: [5, 4] # VGG parameters
+
+SRGAN:
+  # Generator parameters
+  large_kernel_size_g: 9  # kernel size of the first and last convolutions which transform the inputs and outputs
+  small_kernel_size_g: 5  # kernel size of all convolutions in-between, i.e. those in the residual and subpixel convolutional blocks
+  n_channels_g: 64  # number of channels in-between, i.e. the input and output channels for the residual and subpixel convolutional blocks
+  n_blocks_g: 16  # number of residual blocks
+  srresnet_checkpoint: "checkpoints/checkpoint_srresnet.pth.tar"  # filepath of the trained SRResNet checkpoint used for initialisation, "none" for training Generator from scratch
+  activation_g: "GELU" # activation function
+  enable_standard_bn_g: False # enable batch normalisation as in paper
+  resid_scale_factor: 0.1 # residual scaling (can be different from checkpoint)
+  self_attention_g: True # enable self-attention
+
+  # Discriminator parameters
+  kernel_size_d: 3  # kernel size in all convolutional blocks
+  n_channels_d: 64  # number of output channels in the first convolutional block, after which it is doubled in every 2nd block thereafter
+  n_blocks_d: 8  # number of convolutional blocks
+  fc_size_d: 1024  # size of the first fully connected layer
+  self_attention_d: True # enable self-attention
+  spectral_norm_d: False # enable spectral normalisation
+  dcgan_weight_init_d: False # weight initialisation as in dcgan
+
+  # Learning parameters
+  checkpoint: None  # path to model (SRGAN) checkpoint, None if none
+  batch_size: 16  # batch size
+  starting_epoch: 0  # start at this epoch
+  iterations: 600000  # number of training iterations
+  workers: 4  # number of workers for loading data in the DataLoader
+  beta: 0.001  # the coefficient to weight the adversarial loss in the perceptual loss
+  learning_rate: 0.0001  # learning rate
+  grad_clip: 0.1  # clip if gradients are exploding
+  content_loss_criterion: "MSE" # content loss function
+  adversarial_loss_criterion: "BCE" # adversarial loss function
+  VGG_params: [5, 4] # VGG parameters
