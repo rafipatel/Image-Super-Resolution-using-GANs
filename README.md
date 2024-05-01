@@ -1,9 +1,10 @@
-**Super-Resolution with SRGAN and SRResNet**
+# Super-Resolution with SRResNet and SRGAN
 
+Note: This repository and its contents support the coursework of the INM705 module at City, University of London.
 
 ### Overview
 
-This repository contains a PyTorch implementation of the Super-Resolution Generative Adversarial Network (SRGAN) & Super-Resolution Convolutional Neural Network (SRResNet) for enhancing the resolution of images. SRGAN and SRResNet are deep learning architecture capable of generating high-resolution images from low-resolution inputs.
+This repository contains a PyTorch implementation of the Super-Resolution Generative Adversarial Network (SRGAN) & Super-Resolution Residual Network (SRResNet) for enhancing the resolution of images. SRGAN and SRResNet are deep learning architectures capable of generating high-resolution images from low-resolution inputs.
 
 ### Table of Contents
 1. [Introduction](#introduction)
@@ -11,7 +12,7 @@ This repository contains a PyTorch implementation of the Super-Resolution Genera
 3. [Features](#features)
 4. [Training](#training)
 5. [Evaluation](#evaluation)
-6. [ File Structure](#FileStructure)
+6. [File Structure](#FileStructure)
 7. [Usage](#usage)
 
 ### Introduction
@@ -21,13 +22,13 @@ Super-resolution is a computer vision task that aims to improve the resolution o
 
 SRResNet is a deep residual network. The SRResNet architecture is inspired by the ResNet architecture and is optimized for super-resolution tasks. It learns to map low-resolution images to high-resolution ones by capturing intricate details and features through multiple layers.
 
-**SRGAN ( Super-Resolution Generative Adversarial Network)**
+**SRGAN (Super-Resolution Generative Adversarial Network)**
 
 SRGAN combines the SRResNet with an adversarial network, consisting of a discriminator and a generator. The discriminator learns to differentiate between real high-resolution images and generated high-resolution images, while the generator aims to produce high-quality images that are indistinguishable from real ones. This adversarial training process encourages the generator to generate more realistic and visually pleasing high-resolution images.
 
 ### Requirements
-- Python 3.6+
-- PyTorch
+- Python 3.9+
+- [PyTorch (with CUDA for GPU usage)](https://pytorch.org/get-started/locally/)
 - wandb (Weights & Biases)
 - All other requirements listed in **requirements.txt**
 
