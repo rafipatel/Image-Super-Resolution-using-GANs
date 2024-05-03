@@ -12,6 +12,9 @@ from utils import *
 from logger import Logger
 from loss import TruncatedVGG19
 
+## As found in https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Super-Resolution ##
+## With some changes (residual scaling, adding GELU, attention, disabling batch normalisation, etc.) ##
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 torch.backends.cudnn.benchmark = True
