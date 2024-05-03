@@ -1,0 +1,2 @@
+"Download 'checkpoint_srgan.pth.tar' from baseline models and replace with this file (only if you want to perform inference on our SRGAN model or to finetune/continue training)"
+"Note: this is not needed if you are only working with SRResNet (train_srresnet.py)"
