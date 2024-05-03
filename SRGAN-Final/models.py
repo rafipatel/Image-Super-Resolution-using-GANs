@@ -4,6 +4,9 @@ import torchvision
 import math
 from torch.nn.utils import spectral_norm as SpectralNorm
 
+## As found in https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Super-Resolution ##
+## With some changes (residual scaling, adding GELU, attention, disabling batch normalisation, etc.) ##
+
 class ConvolutionalBlock(nn.Module):
     """
     A convolutional block, comprising convolutional, BN, activation layers.

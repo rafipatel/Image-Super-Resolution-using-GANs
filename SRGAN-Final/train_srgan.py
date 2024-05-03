@@ -12,6 +12,9 @@ from utils import *
 from logger import Logger
 from loss import TruncatedVGG19, BCEWithLogitsLoss_label_smoothing
 
+## As found in https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Super-Resolution ##
+## With some changes (residual scaling, adding GELU, attention, disabling batch normalisation, etc.) ##
+
 # Default device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
