@@ -71,7 +71,7 @@ The 'test_folders' is only used during testing, and it is not mandatory to inclu
 
 5. After completing all of the previous steps, you can safely run the 'train_srresnet.py' file from your chosen folder ('/SRGAN-Baseline' or '/SRGAN-Final') if you wish to train an SRResNet model, or you can run the 'train_srgan.py' file if you wish to train an SRGAN model. You may edit the 'config.yaml' file with your chosen hyperparameters to use during training, including adding any checkpoint paths (such as those that we provide). We advise using an SRResNet checkpoint as the generator for the SRGAN when running the 'train_srgan.py' file, though it is not compulsory.
 
-6. **Optional**: Should you wish to use our checkpoints, you need to download them [here]() for your choice of model. You do not need to make any edits to the 'config.yaml' if you are only interested in using our checkpoints for the relevant model. These checkpoints should be placed in the '/checkpoints' folder for the relevant model.
+6. **Optional**: Should you wish to use our checkpoints, you need to download them [here]() for your choice of model. You need to edit the 'config.yaml' file with the checkpoint path if you interested in using our checkpoints for the relevant model. These checkpoints should be placed in the '/checkpoints' folder for the relevant model.
 
 ## Acknowledgements
 - The SRResNet model architecture and training procedure are based on the paper: "Photo-Realistic Single Image Super-Resolution Using a Generative Adversarial Network"
