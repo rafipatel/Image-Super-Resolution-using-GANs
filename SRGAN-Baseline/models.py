@@ -7,6 +7,8 @@ from torch.nn.utils import spectral_norm as SpectralNorm
 ## As found in https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Super-Resolution ##
 ## With some changes (residual scaling, adding GELU, attention, disabling batch normalisation, etc.) ##
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 class ConvolutionalBlock(nn.Module):
     """
     A convolutional block, comprising convolutional, BN, activation layers.
@@ -256,7 +258,7 @@ class Generator(nn.Module):
 
         srresnet_checkpoint: checkpoint filepath
         """
-        srresnet = torch.load(srresnet_checkpoint)["model"]
+        srresnet = torch.load(srresnet_checkpoint, map_location = device)["model"]
         self.net.load_state_dict(srresnet.state_dict())
 
         print("\nLoaded weights from pre-trained SRResNet.\n")
