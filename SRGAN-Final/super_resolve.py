@@ -11,9 +11,9 @@ srgan_checkpoint = "checkpoint_srgan.pth.tar"
 srresnet_checkpoint = "checkpoint_srresnet.pth.tar"
 
 # Load models
-srresnet = torch.load(srresnet_checkpoint)["model"].to(device)
+srresnet = torch.load(srresnet_checkpoint, map_location = device)["model"].to(device)
 srresnet.eval()
-srgan_generator = torch.load(srgan_checkpoint)["generator"].to(device)
+srgan_generator = torch.load(srgan_checkpoint, map_location = device)["generator"].to(device)
 srgan_generator.eval()
 
 def visualise_sr(img, halve = False):
@@ -51,7 +51,7 @@ def visualise_sr(img, halve = False):
     sr_img_srgan = sr_img_srgan.squeeze(0).cpu().detach()
     sr_img_srgan = convert_image(sr_img_srgan, source = "[-1, 1]", target = "pil")
 
-    fig, axs = plt.subplots(1, 4, figsize=(20, 5))
+    fig, axs = plt.subplots(1, 4, figsize = (20, 5))
 
     # Plot bicubic-upsampled image
     axs[0].imshow(bicubic_img)
