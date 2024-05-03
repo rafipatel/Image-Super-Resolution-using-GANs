@@ -52,7 +52,7 @@ SRGAN:
   n_channels_d: 64  # number of output channels in the first convolutional block, after which it is doubled in every 2nd block thereafter
   n_blocks_d: 8  # number of convolutional blocks
   fc_size_d: 1024  # size of the first fully connected layer
-  self_attention_d: True # enable self-attention
+  self_attention_d: False # enable self-attention
   spectral_norm_d: False # enable spectral normalisation
   dcgan_weight_init_d: False # weight initialisation as in dcgan
   optimizer_d: "adam" # discriminator optimiser
