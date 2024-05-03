@@ -21,25 +21,25 @@ srresnet_checkpoint = "checkpoint_srresnet.pth.tar"
 # The parameters are then updated for the model as seen below
 # Some of our models will allow you to skip the steps uncommented below, here is how you can do so - this only works for the most up to date models we ran, which are those with attention
 # Load SRResNet
-#srresnet = torch.load(srresnet_checkpoint)["model"].to(device)
+#srresnet = torch.load(srresnet_checkpoint, map_location = device)["model"].to(device)
 #srresnet.eval()
 #model = srresnet
 # Load SRGAN
-#srgan_generator = torch.load(srgan_checkpoint)["generator"].to(device)
+#srgan_generator = torch.load(srgan_checkpoint, map_location = device)["generator"].to(device)
 #srgan_generator.eval()
 #model = srgan_generator
 ########################################################################################################################
 
 # Load SRResNet
 net = SRResNet(large_kernel_size = 9, small_kernel_size = 5, n_channels = 64, n_blocks = 20, scaling_factor = 4, self_attention = False)
-srresnet = torch.load(srresnet_checkpoint)["model"].to(device)
+srresnet = torch.load(srresnet_checkpoint, map_location = device)["model"].to(device)
 net.load_state_dict(srresnet.state_dict())
 model = net.to(device)
 model.eval()
 
 # Load SRGAN (uncomment and comment SRResNet lines to use this)
 #net = Generator(large_kernel_size = 9, small_kernel_size = 3, n_channels = 64, n_blocks = 16, scaling_factor = 4, self_attention = False)
-#srgan_generator = torch.load(srgan_checkpoint)["generator"].to(device)
+#srgan_generator = torch.load(srgan_checkpoint, map_location = device)["generator"].to(device)
 #net.load_state_dict(srgan_generator.state_dict())
 #model = net.to(device)
 #model.eval()
