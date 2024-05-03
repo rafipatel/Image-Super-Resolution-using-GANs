@@ -3,7 +3,7 @@
 Note: This repository and its contents support the coursework of the INM705 module at City, University of London.
 
 ## SRGAN original architecture
-![Example Image](architecture.png)
+![Example Image](architecture.jpg)
 
 You can find the original architecture of SRGAN in the following paper:
 [SRGAN: Photo-Realistic Single Image Super-Resolution Using Generative Adversarial Networks](https://arxiv.org/abs/1609.04802)
