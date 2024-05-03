@@ -349,7 +349,7 @@ def main():
     if srresnet_settings["checkpoint"].lower() == "none":
         model = SRResNet(large_kernel_size = srresnet_settings["large_kernel_size"], small_kernel_size = srresnet_settings["small_kernel_size"], n_channels = srresnet_settings["n_channels"], n_blocks = srresnet_settings["n_blocks"], scaling_factor = data_settings["scaling_factor"], activation = srresnet_settings["activation"], enable_standard_bn = srresnet_settings["enable_standard_bn"], resid_scale_factor = srresnet_settings["resid_scale_factor"], self_attention = srresnet_settings["self_attention"])
     else:
-        checkpoint = torch.load(srresnet_settings["checkpoint"])
+        checkpoint = torch.load(srresnet_settings["checkpoint"], map_location = device)
         starting_epoch = checkpoint["epoch"] + 1
         model = checkpoint["model"]
         optimizer = checkpoint["optimizer"]
