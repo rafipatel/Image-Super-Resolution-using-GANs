@@ -63,11 +63,11 @@ After training, you can evaluate the trained model on a separate validation data
 
 4. **IMPORTANT IF USING DIFFERENT DATASETS**: After downloading the datasets, before you can start running any code, you may need to run the 'create_data_lists.py' file inside the '/SRGAN-Baseline' and '/SRGAN-Final' folders. If you are not using the same datasets as us, you will certainly need to edit the contents of this file and later run it. In particular, you need to edit the following parameters with the directories of your datasets:
 
-  train_folders = ["../test2015"]
-  val_folders = ["../val2017"]
-  test_folders = ["../Set5", "../Set14", "../BSDS100"]
+``train_folders = ["../test2015"]
+val_folders = ["../val2017"]
+test_folders = ["../Set5", "../Set14", "../BSDS100"]``
 
-  The 'test_folders' is only used during testing, and it is not mandatory to include a dataset here if you are only interested in model training. We note that if you follow our guidance and are using the same     datasets as us, you can ignore this step. We have already included the 'train_images.json' and 'val_images.json' files for you, which essentially inform the program which images are at least of a certain        minimum size (we chose 100) and can be safely used during training.
+The 'test_folders' is only used during testing, and it is not mandatory to include a dataset here if you are only interested in model training. We note that if you follow our guidance and are using the same     datasets as us, you can ignore this step. We have already included the 'train_images.json' and 'val_images.json' files for you, which essentially inform the program which images are at least of a certain        minimum size (we chose 100) and can be safely used during training.
 
 5. After completing all of the previous steps, you can safely run the 'train_srresnet.py' file from your chosen folder ('/SRGAN-Baseline' or '/SRGAN-Final') if you wish to train an SRResNet model, or you can run the 'train_srgan.py' file if you wish to train an SRGAN model. You may edit the 'config.yaml' file with your chosen hyperparameters to use during training, including adding any checkpoint paths (such as those that we provide). We advise using an SRResNet checkpoint as the generator for the SRGAN when running the 'train_srgan.py' file, though it is not compulsory.
 
