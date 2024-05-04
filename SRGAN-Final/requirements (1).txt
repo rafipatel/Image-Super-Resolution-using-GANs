@@ -1,0 +1,8 @@
+pillow==9.4.0
+numpy==1.25.2
+wandb==0.16.4
+PyYAML==6.0.1
+torcheval==0.0.7
+piq==0.8.0
+matplotlib==3.8.4
+scikit-image==0.22.0
