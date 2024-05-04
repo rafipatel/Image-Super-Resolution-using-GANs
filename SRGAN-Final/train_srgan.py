@@ -302,7 +302,7 @@ def main():
         discriminator = Discriminator(kernel_size = srgan_settings["kernel_size_d"], n_channels = srgan_settings["n_channels_d"], n_blocks = srgan_settings["n_blocks_d"], fc_size = srgan_settings["fc_size_d"], self_attention = srgan_settings["self_attention_d"], spectral_norm = srgan_settings["spectral_norm_d"])
 
     else:
-        checkpoint = torch.load(checkpoint, map_location = device)
+        checkpoint = torch.load(srgan_settings["checkpoint"], map_location = device)
         starting_epoch = checkpoint["epoch"] + 1
         generator = checkpoint["generator"]
         discriminator = checkpoint["discriminator"]
