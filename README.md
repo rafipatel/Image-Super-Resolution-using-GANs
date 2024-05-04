@@ -2,7 +2,7 @@
 
 Note: This repository and its contents support the coursework of the INM705 module at City, University of London.
 
-## SRGAN original architecture
+## SRGAN Original Architecture
 ![Example Image](architecture.jpg)
 
 You can find the original architecture of SRGAN in the following paper:
@@ -59,6 +59,10 @@ After training, you can evaluate the trained model on a separate validation data
 - `logger.py`: Logger class for logging training metrics to wandb.
 - `loss.py`: Custom VGG loss function used in training.
 - `checkpoints/`: Directory to save model checkpoints during training.
+
+### Datasets
+Our training dataset ('test2015') and validation dataset ('val2017') can be downloaded [here](https://cocodataset.org/#download).
+Our test datasets ('Set5', 'Set14', and 'BSDS100') can be downloaded [here](https://drive.google.com/drive/folders/1B3DJGQKB6eNdwuQIhdskA64qUuVKLZ9u).
 
 ### Checkpoints
 Our checkpoints can be downloaded [here](https://cityuni-my.sharepoint.com/:f:/g/personal/yasir-zubayr_barlas_city_ac_uk/EvPZOvxznetMi6MV3iN40JsBosC_QSkUhjvD464jKtUYrg?e=barQWp).
