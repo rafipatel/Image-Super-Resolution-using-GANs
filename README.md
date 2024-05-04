@@ -34,7 +34,6 @@ SRGAN combines the SRResNet with an adversarial network, consisting of a discrim
 ### Requirements
 - Python 3.9+
 - [PyTorch (with CUDA for GPU usage)](https://pytorch.org/get-started/locally/)
-- 'wandb' (Weights & Biases)
 - All other requirements listed in [**requirements.txt**](https://github.com/rafipatel/Image-Super-Resolution-using-GANs/blob/main/requirements.txt)
 
 ### Training
