@@ -12,14 +12,14 @@ srgan_checkpoint = "checkpoints/checkpoint_srgan.pth.tar"
 srresnet_checkpoint = "checkpoints/checkpoint_srresnet.pth.tar"
 
 # Load SRResNet (Our SRResNet)
-net = SRResNet(large_kernel_size = 9, small_kernel_size = 5, n_channels = 64, n_blocks = 20, scaling_factor = 4, activation = "GELU", enable_standard_bn = False, resid_scale_factor = "none", self_attention = False)
+net = SRResNet(large_kernel_size = 9, small_kernel_size = 3, n_channels = 64, n_blocks = 16, scaling_factor = 4, activation = "PReLU", enable_standard_bn = True, resid_scale_factor = "none", self_attention = False)
 srresnet = torch.load(srresnet_checkpoint, map_location = device)["model"].to(device)
 net.load_state_dict(srresnet.state_dict())
 srresnet = net.to(device)
 srresnet.eval()
 
 # Load SRGAN (Our SRGAN)
-net = Generator(large_kernel_size = 9, small_kernel_size = 5, n_channels = 64, n_blocks = 16, scaling_factor = 4, activation = "GELU", enable_standard_bn = False, resid_scale_factor = 0.1, self_attention = True)
+net = Generator(large_kernel_size = 9, small_kernel_size = 3, n_channels = 64, n_blocks = 16, scaling_factor = 4, activation = "PReLU", enable_standard_bn = True, resid_scale_factor = "none", self_attention = False)
 srgan_generator = torch.load(srgan_checkpoint, map_location = device)["generator"].to(device)
 net.load_state_dict(srgan_generator.state_dict())
 srgan_generator = net.to(device)
