@@ -39,9 +39,6 @@ SRGAN combines the SRResNet with an adversarial network, consisting of a discrim
 ### Training
 The training process involves optimising the SRGAN and SRResNet models to generate high-quality images. You can customise various hyperparameters such as batch size, learning rate, optimiser, and loss function in the `config.yaml` file. Please refer to the `config.yaml` file for a full list of hyperparameters.
 
-### Evaluation
-After training, you can evaluate the trained model on a separate validation dataset. The evaluation script computes metrics such as loss, PSNR (Peak Signal-to-Noise Ratio), and SSIM (Structural Similarity Index) to assess the performance of the model.
-
 ### File Structure ('/SRGAN-Baseline' and '/SRGAN-Final')
 - `train_srresnet.py`: Script used to train an SRResNet model with the 'SRResNet' hyperparameters set in the `config.yaml` file.
 - `train_srgan.py`: Script used to train an SRGAN model with the 'SRGAN' hyperparameters set in the `config.yaml` file. A checkpointed/pre-trained SRResNet model can be used as the generator, rather than training from scratch (recommended).
