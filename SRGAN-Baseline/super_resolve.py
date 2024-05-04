@@ -3,6 +3,7 @@ from utils import *
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import matplotlib.pyplot as plt
+from models import *
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -10,10 +11,18 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 srgan_checkpoint = "checkpoints/checkpoint_srgan.pth.tar"
 srresnet_checkpoint = "checkpoints/checkpoint_srresnet.pth.tar"
 
-# Load models
+# Load SRResNet (Our SRResNet)
+net = SRResNet(large_kernel_size = 9, small_kernel_size = 5, n_channels = 64, n_blocks = 20, scaling_factor = 4, activation = "GELU", enable_standard_bn = False, resid_scale_factor = "none", self_attention = False)
 srresnet = torch.load(srresnet_checkpoint, map_location = device)["model"].to(device)
+net.load_state_dict(srresnet.state_dict())
+srresnet = net.to(device)
 srresnet.eval()
+
+# Load SRGAN (Our SRGAN)
+net = Generator(large_kernel_size = 9, small_kernel_size = 5, n_channels = 64, n_blocks = 16, scaling_factor = 4, activation = "GELU", enable_standard_bn = False, resid_scale_factor = 0.1, self_attention = True)
 srgan_generator = torch.load(srgan_checkpoint, map_location = device)["generator"].to(device)
+net.load_state_dict(srgan_generator.state_dict())
+srgan_generator = net.to(device)
 srgan_generator.eval()
 
 def visualise_sr(img, halve = False):
@@ -78,4 +87,4 @@ def visualise_sr(img, halve = False):
     plt.show()
 
 if __name__ == "__main__":
-    visualise_sr("../Set14/comic.png")
+    visualise_sr("../hi_campaign.png")
