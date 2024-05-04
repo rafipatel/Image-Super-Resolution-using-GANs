@@ -1,4 +1,4 @@
-# Super-Resolution with Super-Resolution Residual Network and Super-Resolution Generative Adversarial Network
+# Super-Resolution with SRResNet and SRGAN
 
 Note: This repository and its contents support the coursework of the INM705 module at City, University of London.
 
