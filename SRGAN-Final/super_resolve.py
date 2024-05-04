@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Model checkpoints
-srgan_checkpoint = "checkpoint_srgan.pth.tar"
-srresnet_checkpoint = "checkpoint_srresnet.pth.tar"
+srgan_checkpoint = "checkpoints/checkpoint_srgan.pth.tar"
+srresnet_checkpoint = "checkpoints/checkpoint_srresnet.pth.tar"
 
 # Load models
 srresnet = torch.load(srresnet_checkpoint, map_location = device)["model"].to(device)
