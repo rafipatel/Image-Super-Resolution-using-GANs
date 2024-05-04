@@ -87,4 +87,5 @@ def visualise_sr(img, halve = False):
     plt.show()
 
 if __name__ == "__main__":
-    visualise_sr("../hi_campaign.png")
+    # Enter a path to any image, this is an example for an image in the 'Set5' dataset
+    visualise_sr("../Set5/woman.png")
