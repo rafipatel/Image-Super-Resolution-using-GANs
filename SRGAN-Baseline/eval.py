@@ -12,8 +12,8 @@ data_folder = "./"
 test_data_names = ["Set5", "Set14", "BSDS100", "DIV2K_valid_HR"]
 
 # Model checkpoints
-srgan_checkpoint = "checkpoint_srgan.pth.tar"
-srresnet_checkpoint = "checkpoint_srresnet.pth.tar"
+srgan_checkpoint = "checkpoints/checkpoint_srgan.pth.tar"
+srresnet_checkpoint = "checkpoints/checkpoint_srresnet.pth.tar"
 
 #### Note ####
 # Many updates were made to the model classes and their functionality, gradually adding the use of different optimisers, self-attention, etc.
