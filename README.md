@@ -88,6 +88,9 @@ The 'test_folders' is only used during testing, and it is not mandatory to inclu
 
 7. **IMPORTANT NOTE**: The code assumes that you open your workspace in either the `/SRGAN-Baseline` or `/SRGAN-Final` model folders in your integrated development environment (IDE), rather than opening the whole folder containing all of the datasets, etc. You can edit these to your preferences, but we recommend following the folder structure set out in this repository for ease.
 
+## Inference
+We provide a Jupyter Notebook (`inference.ipynb`) and standard Python file (`super_resolve.py`) for inference. Either of these methods can be used to super-resolve an image. You should enter a path to a high-resolution image in the 'visualise_sr()' function in your chosen inference file. We provide example paths already if you are using our test datasets. You must have our checkpoints downloaded and added to the `checkpoints/` folder, though you can edit the paths as you wish to the checkpoints inside the code. We recommend following the Jupyter Notebook for an easy to understand demonstration.
+
 ### Weights & Biases ('wandb')
 If you have not used 'wandb' previously, you will be prompted to enter your API key into the terminal. You need a (free) 'wandb' account if not already made, and you can find further instructions [here](https://docs.wandb.ai/quickstart).
 
