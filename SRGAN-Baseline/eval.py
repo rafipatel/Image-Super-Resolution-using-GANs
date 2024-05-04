@@ -33,7 +33,7 @@ srresnet_checkpoint = "checkpoints/checkpoint_srresnet.pth.tar"
 
 generator_model = False
 
-# Load SRResNet
+# Load SRResNet (uncomment and comment SRGAN lines to use this)
 #net = SRResNet(large_kernel_size = 9, small_kernel_size = 3, n_channels = 64, n_blocks = 16, scaling_factor = 4, activation = "PReLU", enable_standard_bn = True, resid_scale_factor = "none", self_attention = False)
 #srresnet = torch.load(srresnet_checkpoint, map_location = device)["model"].to(device)
 #net.load_state_dict(srresnet.state_dict())
