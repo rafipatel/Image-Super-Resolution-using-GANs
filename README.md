@@ -64,6 +64,8 @@ Our test datasets ('Set5', 'Set14', and 'BSDS100') can be downloaded [here](http
 ### Checkpoints
 Our checkpoints can be downloaded [here](https://cityuni-my.sharepoint.com/:f:/g/personal/yasir-zubayr_barlas_city_ac_uk/EvPZOvxznetMi6MV3iN40JsBosC_QSkUhjvD464jKtUYrg?e=barQWp). Each folder contains a 'readme.txt' file containing the hyperparameters used to train the models. You will need these if you edit the code later, otherwise we have already filled them in appropriately for you. You only need to replace the dummy checkpoints in this repository with those found [here](https://cityuni-my.sharepoint.com/:f:/g/personal/yasir-zubayr_barlas_city_ac_uk/EvPZOvxznetMi6MV3iN40JsBosC_QSkUhjvD464jKtUYrg?e=barQWp).
 
+Unfortunately, our SRResNet checkpoints were made before we introduced residual scaling in the code. As a result, there are no residual scaling attributes in these checkpoints, meaning that continuing training from these checkpoints is not possible. It is possible to avoid this by removing parts of the code that reference 'self.resid_scale_factor', though we do not do this here. Inference is still possible regardless. The SRGAN checkpoints will run as normal.
+
 ### Usage
 1. We recommend first downloading/cloning the whole repository (bar the `/archive` folder), though if you wish to work only with the baseline model you do not need the `/SRGAN-Final` folder, and vice versa for working with our final model. We also recommend sticking to the folder structure found in this repository, otherwise you will need to make a few edits indicating where the datasets and checkpoints can be found.
 
