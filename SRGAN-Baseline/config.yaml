@@ -14,9 +14,9 @@ SRResNet:
   small_kernel_size: 3  # kernel size of all convolutions in-between, i.e. those in the residual and subpixel convolutional blocks
   n_channels: 64  # number of channels in-between, i.e. the input and output channels for the residual and subpixel convolutional blocks
   n_blocks: 16  # number of residual blocks
-  activation: "PReLU" # activation function
+  activation: "PReLU" # activation function ("PReLU", "GELU", "LeakyRELU", "Tanh")
   enable_standard_bn: True # enable batch normalisation as in paper
-  resid_scale_factor: "none" # residual scaling
+  resid_scale_factor: "none" # residual scaling (float)
   self_attention: False # enable self-attention
   dcgan_weight_init: False # weight initialisation as in dcgan
 
@@ -29,8 +29,8 @@ SRResNet:
   learning_rate: 0.0001  # learning rate
   grad_clip: "none"  # clip if gradients are exploding
   adaptive_lr: False # adaptive learning rate
-  optimizer: "adam" # optimiser
-  criterion: "MSE" # loss function
+  optimizer: "adam" # optimiser ("adam", "sgd", "sgd-n")
+  criterion: "MSE" # loss function ("MSE", "MAE", "SSIM")
   with_VGG: False # enable VGG
   VGG_params: [5, 4] # VGG parameters
 
@@ -41,11 +41,11 @@ SRGAN:
   n_channels_g: 64  # number of channels in-between, i.e. the input and output channels for the residual and subpixel convolutional blocks
   n_blocks_g: 16  # number of residual blocks
   srresnet_checkpoint: "checkpoints/checkpoint_srresnet.pth.tar"  # filepath of the trained SRResNet checkpoint used for initialisation, "none" for training Generator from scratch
-  activation_g: "PReLU" # activation function
+  activation_g: "PReLU" # activation function ("PReLU", "GELU", "LeakyRELU", "Tanh")
   enable_standard_bn_g: True # enable batch normalisation as in paper
-  resid_scale_factor: "none" # residual scaling (can be different from checkpoint)
+  resid_scale_factor: "none" # residual scaling (float) (can be different from checkpoint)
   self_attention_g: False # enable self-attention
-  optimizer_g: "adam" # discriminator optimiser
+  optimizer_g: "adam" # generator optimiser ("adam", "sgd", "sgd-n")
 
   # Discriminator parameters
   kernel_size_d: 3  # kernel size in all convolutional blocks
@@ -55,7 +55,7 @@ SRGAN:
   self_attention_d: False # enable self-attention
   spectral_norm_d: False # enable spectral normalisation
   dcgan_weight_init_d: False # weight initialisation as in dcgan
-  optimizer_d: "adam" # discriminator optimiser
+  optimizer_d: "adam" # discriminator optimiser ("adam", "sgd", "sgd-n")
 
   # Learning parameters
   checkpoint: None  # path to model (SRGAN) checkpoint, None if none
@@ -66,8 +66,8 @@ SRGAN:
   beta: 0.001  # the coefficient to weight the adversarial loss in the perceptual loss
   learning_rate: 0.0001  # learning rate
   grad_clip: "none"  # clip if gradients are exploding
-  content_loss_criterion: "MSE" # content loss function
-  adversarial_loss_criterion: "BCE" # adversarial loss function
+  content_loss_criterion: "MSE" # content loss function ("MSE", "MAE", "huber")
+  adversarial_loss_criterion: "BCE" # adversarial loss function ("BCE", "BCE_label_smoothing", "wasserstein", "hinge")
   VGG_params: [5, 4] # VGG parameters
   beta: 0.001 # beta for perceptual loss
   learning_rate: 0.0001 # learning rate
