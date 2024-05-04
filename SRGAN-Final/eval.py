@@ -10,7 +10,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Data
 data_folder = "./"
-test_data_names = ["Set5", "Set14", "BSDS100", "DIV2K_valid_HR"]
+test_data_names = ["Set5", "Set14", "BSDS100"]
 
 # Model checkpoints
 srgan_checkpoint = "checkpoints/checkpoint_srgan.pth.tar"
@@ -22,27 +22,27 @@ srresnet_checkpoint = "checkpoints/checkpoint_srresnet.pth.tar"
 # The parameters are then updated for the model as seen below
 # Some of our models will allow you to skip the steps uncommented below, here is how you can do so - this only works for the most up to date models we ran, which are those with attention
 # Load SRResNet
-#srresnet = torch.load(srresnet_checkpoint)["model"].to(device)
+#srresnet = torch.load(srresnet_checkpoint, map_location = device)["model"].to(device)
 #srresnet.eval()
 #model = srresnet
 # Load SRGAN
-#srgan_generator = torch.load(srgan_checkpoint)["generator"].to(device)
+#srgan_generator = torch.load(srgan_checkpoint, map_location = device)["generator"].to(device)
 #srgan_generator.eval()
 #model = srgan_generator
 ########################################################################################################################
 
 generator_model = False
 
-# Load SRResNet
-#net = SRResNet(large_kernel_size = 9, small_kernel_size = 3, n_channels = 64, n_blocks = 16, scaling_factor = 4, activation = "PReLU", enable_standard_bn = True, resid_scale_factor = "none", self_attention = False)
-#srresnet = torch.load(srresnet_checkpoint)["model"].to(device)
+# Load SRResNet (uncomment and comment SRGAN lines to use this)
+#net = SRResNet(large_kernel_size = 9, small_kernel_size = 5, n_channels = 64, n_blocks = 20, scaling_factor = 4, activation = "GELU", enable_standard_bn = False, resid_scale_factor = "none", self_attention = False)
+#srresnet = torch.load(srresnet_checkpoint, map_location = device)["model"].to(device)
 #net.load_state_dict(srresnet.state_dict())
 #model = net.to(device)
 #model.eval()
 
 # Load SRGAN (uncomment and comment SRResNet lines to use this)
-net = Generator(large_kernel_size = 9, small_kernel_size = 3, n_channels = 64, n_blocks = 16, scaling_factor = 4, activation = "PReLU", enable_standard_bn = True, resid_scale_factor = "none", self_attention = False)
-srgan_generator = torch.load(srgan_checkpoint)["generator"].to(device)
+net = Generator(large_kernel_size = 9, small_kernel_size = 5, n_channels = 64, n_blocks = 16, scaling_factor = 4, activation = "GELU", enable_standard_bn = False, resid_scale_factor = 0.1, self_attention = True)
+srgan_generator = torch.load(srgan_checkpoint, map_location = device)["generator"].to(device)
 net.load_state_dict(srgan_generator.state_dict())
 model = net.to(device)
 model.eval()
