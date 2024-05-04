@@ -45,7 +45,7 @@ SRGAN:
   enable_standard_bn_g: False # enable batch normalisation as in paper
   resid_scale_factor: 0.1 # residual scaling (float) (can be different from checkpoint)
   self_attention_g: True # enable self-attention
-  optimizer_g: "adam" # generator optimiser
+  optimizer_g: "adam" # generator optimiser ("adam", "sgd", "sgd-n")
 
   # Discriminator parameters
   kernel_size_d: 3  # kernel size in all convolutional blocks
