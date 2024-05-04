@@ -4,6 +4,7 @@ from datasets import SRDataset
 import torch
 import numpy as np
 from models import SRResNet, Generator
+from torcheval.metrics import FrechetInceptionDistance
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -21,28 +22,31 @@ srresnet_checkpoint = "checkpoints/checkpoint_srresnet.pth.tar"
 # The parameters are then updated for the model as seen below
 # Some of our models will allow you to skip the steps uncommented below, here is how you can do so - this only works for the most up to date models we ran, which are those with attention
 # Load SRResNet
-#srresnet = torch.load(srresnet_checkpoint, map_location = device)["model"].to(device)
+#srresnet = torch.load(srresnet_checkpoint)["model"].to(device)
 #srresnet.eval()
 #model = srresnet
 # Load SRGAN
-#srgan_generator = torch.load(srgan_checkpoint, map_location = device)["generator"].to(device)
+#srgan_generator = torch.load(srgan_checkpoint)["generator"].to(device)
 #srgan_generator.eval()
 #model = srgan_generator
 ########################################################################################################################
 
-# Load SRResNet
-net = SRResNet(large_kernel_size = 9, small_kernel_size = 5, n_channels = 64, n_blocks = 20, scaling_factor = 4, self_attention = False)
-srresnet = torch.load(srresnet_checkpoint, map_location = device)["model"].to(device)
-net.load_state_dict(srresnet.state_dict())
-model = net.to(device)
-model.eval()
+generator_model = False
 
-# Load SRGAN (uncomment and comment SRResNet lines to use this)
-#net = Generator(large_kernel_size = 9, small_kernel_size = 3, n_channels = 64, n_blocks = 16, scaling_factor = 4, self_attention = False)
-#srgan_generator = torch.load(srgan_checkpoint, map_location = device)["generator"].to(device)
-#net.load_state_dict(srgan_generator.state_dict())
+# Load SRResNet
+#net = SRResNet(large_kernel_size = 9, small_kernel_size = 3, n_channels = 64, n_blocks = 16, scaling_factor = 4, activation = "PReLU", enable_standard_bn = True, resid_scale_factor = "none", self_attention = False)
+#srresnet = torch.load(srresnet_checkpoint)["model"].to(device)
+#net.load_state_dict(srresnet.state_dict())
 #model = net.to(device)
 #model.eval()
+
+# Load SRGAN (uncomment and comment SRResNet lines to use this)
+net = Generator(large_kernel_size = 9, small_kernel_size = 3, n_channels = 64, n_blocks = 16, scaling_factor = 4, activation = "PReLU", enable_standard_bn = True, resid_scale_factor = "none", self_attention = False)
+srgan_generator = torch.load(srgan_checkpoint)["generator"].to(device)
+net.load_state_dict(srgan_generator.state_dict())
+model = net.to(device)
+model.eval()
+generator_model = True
 
 # Evaluate
 def evaluation():
@@ -56,6 +60,8 @@ def evaluation():
         # Keep track of the PSNRs and the SSIMs across batches
         PSNRs = []
         SSIMs = []
+
+        fid = FrechetInceptionDistance().to(device)
 
         # Faster computation
         with torch.no_grad():
@@ -73,6 +79,9 @@ def evaluation():
                 hr_imgs_y = convert_image(hr_imgs, source = "[-1, 1]", target = "y-channel").squeeze(0)  # (w, h), in y-channel
                 psnr = peak_signal_noise_ratio(hr_imgs_y.cpu().numpy(), sr_imgs_y.cpu().numpy(), data_range = 255.0)
                 ssim = structural_similarity(hr_imgs_y.cpu().numpy(), sr_imgs_y.cpu().numpy(), data_range = 255.0)
+                if generator_model == True:
+                    fid.update(convert_image(hr_imgs, source = "[-1, 1]", target = "[0, 1]"), is_real = True)
+                    fid.update(convert_image(sr_imgs, source = "[-1, 1]", target = "[0, 1]"), is_real = False)
                 PSNRs.append(psnr)
                 SSIMs.append(ssim)
 
@@ -80,6 +89,8 @@ def evaluation():
         print(f"Number of images: {len(test_loader)}")
         print(f"Average PSNR: {round(np.mean(PSNRs), 4)}")
         print(f"Average SSIM: {round(np.mean(SSIMs), 4)}")
+        if generator_model == True:
+            print(f"FID: {round(float(fid.compute()), 4)}")
 
         print("\n")
 
