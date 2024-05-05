@@ -33,18 +33,7 @@ class ConvolutionalBlock(nn.Module):
         # A container that will hold the layers in this convolutional block
         layers = list()
 
-        # A convolutional layer with spectral normalisation
-        if spectral_norm == True:
-            layers.append(
-                SpectralNorm(nn.Conv2d(in_channels = in_channels, out_channels = out_channels, kernel_size = kernel_size, stride = stride,
-                        padding = kernel_size // 2)))
-        
-        # A convolutional layer without spectral normalisation
-        else:
-            # A convolutional layer
-            layers.append(
-                nn.Conv2d(in_channels = in_channels, out_channels = out_channels, kernel_size = kernel_size, stride = stride,
-                        padding = kernel_size // 2))
+ 
 
         # A batch normalisation (BN) layer, if wanted
         if batch_norm is True:
