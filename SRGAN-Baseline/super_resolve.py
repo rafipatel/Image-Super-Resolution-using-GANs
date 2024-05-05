@@ -1,7 +1,7 @@
 import torch
 from utils import *
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import matplotlib.pyplot as plt
 from models import *
 

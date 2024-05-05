@@ -94,7 +94,7 @@ class SubPixelConvolutionalBlock(nn.Module):
         self.pixel_shuffle = nn.PixelShuffle(upscale_factor = scaling_factor)
         
         activation = activation.lower()
-        assert activation in {"prelu", "leakyrelu", "tanh"} #, "gelu"}
+        assert activation in {"prelu", "leakyrelu", "tanh", "gelu"}
 
         # Activation layer
         if activation == "prelu":
