@@ -95,7 +95,7 @@ def train_epoch(train_dataloader, model, criterion, optimizer, truncated_vgg19 =
         if (isinstance(grad_clip, int) == True) or (isinstance(grad_clip, float) == True):
             clip_gradient(optimizer, grad_clip)
 
-        # Update model
+        # Update model parameters
         optimizer.step()
 
         sr_imgs_y = convert_image(sr_imgs, source = "[-1, 1]", target = "[0, 255]")
@@ -118,6 +118,7 @@ def train_epoch(train_dataloader, model, criterion, optimizer, truncated_vgg19 =
             sr_img_grid = make_grid(sr_imgs_y, normalize = True)
             wandb.log({"Super-Resolution Images": [wandb.Image(sr_img_grid)]})
         
+        # To free up space
         del lr_imgs, hr_imgs, sr_imgs, sr_imgs_y, hr_imgs_y
 
     del hr_img_grid, sr_img_grid
@@ -336,10 +337,10 @@ def main():
     logger = wandb_logger.get_logger()
 
     # Custom dataloaders
-    train_dataset = SRDataset(data_folder = data_settings["data_folder"], split = "train", crop_size = data_settings["crop_size"], scaling_factor = data_settings["scaling_factor"], lr_img_type = "imagenet-norm", hr_img_type = "[-1, 1]")
+    train_dataset = SRDataset(data_folder = data_settings["data_folder"], split = "trains", crop_size = data_settings["crop_size"], scaling_factor = data_settings["scaling_factor"], lr_img_type = "imagenet-norm", hr_img_type = "[-1, 1]")
     train_dataloader = DataLoader(train_dataset, batch_size = srresnet_settings["batch_size"], shuffle = True, num_workers = srresnet_settings["workers"], pin_memory = True)  # note that we are passing the collate function here
 
-    val_dataset = SRDataset(data_folder = data_settings["data_folder"], split = "val", crop_size = 0, scaling_factor = data_settings["scaling_factor"], lr_img_type = "imagenet-norm", hr_img_type = "[-1, 1]")
+    val_dataset = SRDataset(data_folder = data_settings["data_folder"], split = "vals", crop_size = 0, scaling_factor = data_settings["scaling_factor"], lr_img_type = "imagenet-norm", hr_img_type = "[-1, 1]")
     val_dataloader = DataLoader(val_dataset, batch_size = 1, shuffle = True, num_workers = srresnet_settings["workers"], pin_memory = True)  # note that we are passing the collate function here
 
     checkpoint = None
