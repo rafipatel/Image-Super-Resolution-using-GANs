@@ -91,13 +91,20 @@ The 'test_folders' is only used during testing, and it is not mandatory to inclu
 ### How to Run (Simple Words)
 1. Clone the repo
 2. Change directory to desired model (SRGAN-Baseline or SRGAN-Final)
-2. Download images for Train, Valid, Test dataset folders. (For instance for tryout, You can download random 20 images, split them in 3 different folders) 
-3. Update the folder names in (`create_data_lists.py`)
-4. Run (`create_data_lists.py`)
-```
-python create_data_lists.py
-```
-5. Run (`tran_srresnet.py`) or (`train_srgan.py`) for training the model.
+3. Download images for Train, Valid, Test dataset folders. (For instance for tryout, You can download random 20 images, split them in 3 different folders) 
+4. Update the folder names in (`create_data_lists.py`)
+5. Run (`create_data_lists.py`)
+    ```
+    python create_data_lists.py
+    ```
+6. Run (`train_srresnet.py`) or (`train_srgan.py`) for training the model.
+    ```
+    python train_srresnet.py
+    ```
+    or
+    ```
+    python train_srgan.py
+    ```
 
 
 ### Inference
