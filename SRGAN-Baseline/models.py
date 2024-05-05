@@ -34,7 +34,7 @@ class ConvolutionalBlock(nn.Module):
         layers = list()
 
         # A convolutional layer with spectral normalisation
-        if spectral_norm == False:
+        if spectral_norm == True:
             layers.append(
                 SpectralNorm(nn.Conv2d(in_channels = in_channels, out_channels = out_channels, kernel_size = kernel_size, stride = stride,
                         padding = kernel_size // 2)))
