@@ -67,7 +67,7 @@ Our checkpoints can be downloaded [here](https://cityuni-my.sharepoint.com/:f:/g
 
 Unfortunately, our SRResNet checkpoints were made before we introduced residual scaling in the code. As a result, there are no residual scaling attributes in these checkpoints, meaning that continuing training from these checkpoints is not possible. It is possible to avoid this by removing parts of the code that reference 'self.resid_scale_factor', though we do not do this here. Inference is still possible regardless. The SRGAN checkpoints will run as normal.
 
-### Usage
+### Usage (detailed)
 1. We recommend first downloading/cloning the whole repository (bar the `/archive` folder), though if you wish to work only with the baseline model you do not need the `/SRGAN-Final` folder, and vice versa for working with our final model. We also recommend sticking to the folder structure found in this repository, otherwise you will need to make a few edits indicating where the datasets and checkpoints can be found.
 
 2. Secondly, you should ensure that all the libraries listed in the [**requirements.txt**](https://github.com/rafipatel/Image-Super-Resolution-using-GANs/blob/main/requirements.txt) file have been installed on your environment (you may wish to create a new environment from scratch to avoid dependency conflicts). You can use your favourite method to install these libraries, such as through using the `pip install -r requirements.txt` command in your terminal. You must also install [PyTorch](https://pytorch.org/get-started/locally/), ideally the CUDA version if you wish to work with a GPU. Follow the instructions on the [PyTorch website](https://pytorch.org/get-started/locally/) for the installation.
@@ -87,6 +87,18 @@ The 'test_folders' is only used during testing, and it is not mandatory to inclu
 6. **Optional**: Should you wish to use our checkpoints, you need to download them [here](https://cityuni-my.sharepoint.com/:f:/g/personal/yasir-zubayr_barlas_city_ac_uk/EvPZOvxznetMi6MV3iN40JsBosC_QSkUhjvD464jKtUYrg?e=barQWp) for your choice of model. You need to edit the 'config.yaml' file with the checkpoint path if you interested in using our checkpoints for the relevant model. These checkpoints should be placed in the `/checkpoints` folder for the relevant model folder.
 
 7. **IMPORTANT NOTE**: The code assumes that you open your workspace in either the `/SRGAN-Baseline` or `/SRGAN-Final` model folders in your integrated development environment (IDE), rather than opening the whole folder containing all of the datasets, etc. You can edit these to your preferences, but we recommend following the folder structure set out in this repository for ease.
+
+### How to Run (Simple Words)
+1. Clone the repo
+2. Change directory to desired model (SRGAN-Baseline or SRGAN-Final)
+2. Download images for Train, Valid, Test dataset folders. (For instance for tryout, You can download random 20 images, split them in 3 different folders) 
+3. Update the folder name in (`create_data_lists.py`)
+4. Run (`create_data_lists.py`)
+```
+python create_data_lists.py
+```
+5. Run (`tran_srresnet.py`) or (`train_srgan.py`) for training the model.
+
 
 ### Inference
 We provide a Jupyter Notebook (`inference.ipynb`) and standard Python file (`super_resolve.py`) for inference. Either of these methods can be used to super-resolve an image. You should enter a path to a high-resolution image in the 'visualise_sr()' function in your chosen inference file. We provide example paths already if you are using our test datasets. You must have our checkpoints downloaded and added to the `checkpoints/` folder, though you can edit the paths as you wish to the checkpoints inside the code. We recommend following the Jupyter Notebook for an easy to understand demonstration.
